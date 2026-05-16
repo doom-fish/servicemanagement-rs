@@ -2,68 +2,80 @@
 
 Safe Rust bindings for Apple’s `ServiceManagement.framework` on macOS.
 
-`servicemanagement-rs` covers the modern helper-service workflow first, while
-also exposing the legacy launchd APIs that are still encountered in existing
-macOS codebases:
+`servicemanagement-rs` 0.2 covers the full public framework surface exposed by
+Apple’s SDK, split into focused Swift bridge files and Rust modules for each
+logical area:
 
-- `AppService` for `SMAppService.mainApp`, login items, agents, and daemons
-- `register`, `unregister`, `status`, and `open_system_settings_login_items`
-- legacy `SMJobBless`, `SMJobSubmit`, `SMJobRemove`, and
-  `SMCopyAllJobDictionaries`
+- `SMAppService`
+- `SMAppServiceStatus`
+- `MainApp`
+- `AgentService`
+- `DaemonService`
+- `LoginItem`
+- legacy `SMLoginItem`
+- legacy `SMJobBless` / launchd job helpers
+- `Authorization`
 
-## Status
-
-Initial `0.1.0` coverage focuses on the modern `SMAppService` surface (via a
-Swift bridge) plus raw / completeness wrappers for the deprecated C APIs.
+It also preserves the original low-level `legacy` module for callers that still
+need raw `CFDictionaryRef` / `AuthorizationRef` access.
 
 ## Installation
 
 ```toml
 [dependencies]
-servicemanagement-rs = "0.1"
+servicemanagement-rs = "0.2"
 ```
 
 ## Quick start
 
 ```rust
-use servicemanagement::AppService;
+use servicemanagement::MainApp;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let service = AppService::main_app()?;
-    println!("main app status: {:?}", service.status());
+    let main_app = MainApp::new()?;
+    println!("main app status: {}", main_app.status().as_str());
     Ok(())
 }
 ```
 
 ## Highlights
 
-- Swift-backed `AppService` wrappers for `mainApp`, `loginItem`, `agent`, and
-  `daemon`
-- Safe `register`, `unregister`, and `status` helpers
-- `open_system_settings_login_items()` convenience wrapper
-- `legacy` module exposing `SMCopyAllJobDictionaries`, `SMJobBless`,
-  `SMJobSubmit`, and `SMJobRemove`
+- `SMAppService` plus typed wrappers for `MainApp`, `AgentService`,
+  `DaemonService`, and `LoginItem`
+- `SMAppServiceStatus` helpers, including `status_for_legacy_plist()`
+- `Authorization` handles with right acquisition and external-form round trips
+- legacy `SMLoginItem::set_enabled()`
+- legacy `SMJobBless` helpers for copying, submitting, removing, and blessing
+  launchd jobs
+- legacy error domains and `SMErrorCode` constants
 
-## API notes
-
-- The `legacy` job-control helpers are intentionally low-level and retain the
-  underlying `AuthorizationRef` / `CFDictionaryRef` requirements.
-- `SMJobBless` and the `SMJob*` launchd APIs are deprecated by Apple but kept
-  here for completeness.
-- `AppService` requires macOS 13+ at runtime; older systems return descriptive
-  bridge errors.
-
-## Smoke example
+## Examples
 
 ```bash
 cargo run --example 01_smoke
+cargo run --example 02_authorization
+cargo run --example 09_sm_job_bless_legacy
 ```
 
-Expected tail output:
+All numbered examples are headless-friendly and exit successfully on macOS even
+when a given API requires additional signing, entitlement, or privileged-helper
+setup.
 
-```text
-✅ servicemanagement smoke OK
-```
+## API notes
+
+- `SMAppService` requires macOS 13+ at runtime.
+- `app_service_error_domain()` requires macOS 15+ at runtime because Apple only
+  added `SMAppServiceErrorDomain` in the macOS 15 SDK/runtime.
+- The safe legacy job helpers use XML property lists and JSON bridge payloads,
+  while the original raw `legacy::*_raw` functions remain available for direct
+  CoreFoundation interop.
+- `SMJobBless`, `SMJobSubmit`, `SMJobRemove`, and `SMLoginItemSetEnabled` are
+  deprecated by Apple but retained here for full framework coverage.
+
+## Coverage audit
+
+See [`COVERAGE.md`](COVERAGE.md) for the per-symbol audit against the SDK
+headers.
 
 ## License
 

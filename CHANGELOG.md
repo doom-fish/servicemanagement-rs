@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0] - 2026-05-16
+
+### Added
+
+- Full `ServiceManagement.framework` SDK coverage, including split Swift bridge
+  files and safe Rust modules for `SMAppService`, `SMAppServiceStatus`,
+  `MainApp`, `AgentService`, `DaemonService`, `LoginItem`, `SMLoginItem`,
+  `SMJobBless`, and `Authorization`.
+- Typed Rust wrappers for the modern `SMAppService` constructors alongside the
+  original `AppService` compatibility alias.
+- Safe legacy helpers for `SMLoginItemSetEnabled`, `SMJobCopyDictionary`,
+  `SMCopyAllJobDictionaries`, `SMJobSubmit`, `SMJobRemove`, and `SMJobBless`,
+  plus `SMErrorCode` and legacy error-domain accessors.
+- Nine numbered examples, nine integration-test files, and a crate-local
+  `COVERAGE.md` audit.
+
 ## [0.1.0] - 2026-05-16
 
 ### Added

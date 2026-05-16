@@ -12,6 +12,9 @@ pub type CFStringRef = *const c_void;
 unsafe extern "C" {
     pub static kSMDomainSystemLaunchd: CFStringRef;
     pub static kSMDomainUserLaunchd: CFStringRef;
+    pub static kSMErrorDomainIPC: CFStringRef;
+    pub static kSMErrorDomainFramework: CFStringRef;
+    pub static kSMErrorDomainLaunchd: CFStringRef;
 
     pub fn CFArrayGetCount(the_array: CFArrayRef) -> isize;
     pub fn CFArrayGetValueAtIndex(the_array: CFArrayRef, idx: isize) -> *const c_void;
@@ -32,6 +35,7 @@ unsafe extern "C" {
         encoding: u32,
     ) -> Boolean;
 
+    pub fn SMJobCopyDictionary(domain: CFStringRef, job_label: CFStringRef) -> CFDictionaryRef;
     pub fn SMCopyAllJobDictionaries(domain: CFStringRef) -> CFArrayRef;
     pub fn SMJobBless(
         domain: CFStringRef,
@@ -70,6 +74,84 @@ unsafe extern "C" {
     pub fn sm_app_service_status(service: *mut c_void) -> i32;
     pub fn sm_app_service_register(service: *mut c_void, error_out: *mut *mut c_char) -> bool;
     pub fn sm_app_service_unregister(service: *mut c_void, error_out: *mut *mut c_char) -> bool;
+    pub fn sm_app_service_unregister_with_completion(
+        service: *mut c_void,
+        error_out: *mut *mut c_char,
+    ) -> bool;
+    pub fn sm_app_service_error_domain(error_out: *mut *mut c_char) -> *mut c_char;
+    pub fn sm_app_service_status_for_legacy_plist(
+        path: *const c_char,
+        error_out: *mut *mut c_char,
+    ) -> i32;
+    pub fn sm_main_app_service(error_out: *mut *mut c_char) -> *mut c_void;
+    pub fn sm_agent_service(plist_name: *const c_char, error_out: *mut *mut c_char) -> *mut c_void;
+    pub fn sm_daemon_service(plist_name: *const c_char, error_out: *mut *mut c_char)
+        -> *mut c_void;
+    pub fn sm_login_item_service(
+        identifier: *const c_char,
+        error_out: *mut *mut c_char,
+    ) -> *mut c_void;
     pub fn sm_open_system_settings_login_items(error_out: *mut *mut c_char) -> bool;
     pub fn sm_app_service_release(service: *mut c_void);
+
+    pub fn sm_legacy_login_item_set_enabled(
+        identifier: *const c_char,
+        enabled: bool,
+        error_out: *mut *mut c_char,
+    ) -> bool;
+
+    pub fn sm_authorization_create(flags: u32, error_out: *mut *mut c_char) -> *mut c_void;
+    pub fn sm_authorization_create_with_rights(
+        rights_json: *const c_char,
+        flags: u32,
+        error_out: *mut *mut c_char,
+    ) -> *mut c_void;
+    pub fn sm_authorization_copy_rights(
+        authorization: *mut c_void,
+        rights_json: *const c_char,
+        flags: u32,
+        error_out: *mut *mut c_char,
+    ) -> bool;
+    pub fn sm_authorization_external_form(
+        authorization: *mut c_void,
+        error_out: *mut *mut c_char,
+    ) -> *mut c_char;
+    pub fn sm_authorization_from_external_form(
+        external_form: *const c_char,
+        error_out: *mut *mut c_char,
+    ) -> *mut c_void;
+    pub fn sm_authorization_destroy_rights(
+        authorization: *mut c_void,
+        error_out: *mut *mut c_char,
+    ) -> bool;
+    pub fn sm_authorization_release(authorization: *mut c_void);
+
+    pub fn sm_legacy_copy_job_dictionary(
+        domain: i32,
+        job_label: *const c_char,
+        error_out: *mut *mut c_char,
+    ) -> *mut c_char;
+    pub fn sm_legacy_copy_all_job_dictionaries(
+        domain: i32,
+        error_out: *mut *mut c_char,
+    ) -> *mut c_char;
+    pub fn sm_legacy_job_submit_plist(
+        domain: i32,
+        plist_xml: *const c_char,
+        authorization: *mut c_void,
+        error_out: *mut *mut c_char,
+    ) -> bool;
+    pub fn sm_legacy_job_remove(
+        domain: i32,
+        job_label: *const c_char,
+        authorization: *mut c_void,
+        wait: bool,
+        error_out: *mut *mut c_char,
+    ) -> bool;
+    pub fn sm_legacy_job_bless(
+        domain: i32,
+        executable_label: *const c_char,
+        authorization: *mut c_void,
+        error_out: *mut *mut c_char,
+    ) -> bool;
 }

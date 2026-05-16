@@ -1,27 +1,32 @@
 use std::ffi::c_void;
 
 use crate::{
-    cf::{cfarray_descriptions, cfstring_from_str},
+    cf::{cfarray_descriptions, cfstring_from_str, copy_description, OwnedCFType},
     ffi, Result, ServiceManagementError,
 };
 
+pub use crate::authorization::{
+    Authorization, AuthorizationFlags, AuthorizationRight, SM_RIGHT_BLESS_PRIVILEGED_HELPER,
+    SM_RIGHT_MODIFY_SYSTEM_DAEMONS,
+};
 pub use crate::ffi::AuthorizationRef;
+pub use crate::sm_job_bless::{
+    bless as bless_plist, copy_all_job_dictionaries as copy_all_job_dictionaries_structured,
+    copy_job_dictionary, job_remove as job_remove_plist, job_submit_plist, LaunchdDomain,
+    LegacyJobDictionary, SMJobBless,
+};
+pub use crate::sm_login_item::{set_enabled as login_item_set_enabled, SMLoginItem};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum LaunchdDomain {
-    System,
-    User,
-}
-
-impl LaunchdDomain {
-    fn as_cfstring(self) -> ffi::CFStringRef {
-        unsafe {
-            match self {
-                Self::System => ffi::kSMDomainSystemLaunchd,
-                Self::User => ffi::kSMDomainUserLaunchd,
-            }
-        }
+pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Option<String>> {
+    let job_label = cfstring_from_str(job_label)?;
+    let dictionary = unsafe { ffi::SMJobCopyDictionary(domain.as_cfstring(), job_label.as_ptr()) };
+    if dictionary.is_null() {
+        return Ok(None);
     }
+    let dictionary = unsafe { OwnedCFType::from_create_rule(dictionary) }.ok_or_else(|| {
+        ServiceManagementError::new("SMJobCopyDictionary", "received null CFDictionary")
+    })?;
+    copy_description(dictionary.as_ptr()).map(Some)
 }
 
 pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<String>> {

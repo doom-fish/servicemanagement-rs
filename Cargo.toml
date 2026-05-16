@@ -1,11 +1,11 @@
 [package]
 name = "servicemanagement-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/doom-fish/servicemanagement-rs"
 repository = "https://github.com/doom-fish/servicemanagement-rs"
-description = "Safe Rust bindings for Apple's ServiceManagement framework — SMAppService plus legacy launchd helpers on macOS"
+description = "Safe Rust bindings for Apple's ServiceManagement framework — modern SMAppService plus legacy helper tooling on macOS"
 authors = ["Per Johansson <per@doom.fish>"]
 keywords = ["servicemanagement", "macos", "launchd", "loginitems", "apple"]
 categories = ["api-bindings", "os::macos-apis"]
@@ -17,11 +17,13 @@ include = [
     "swift-bridge/Package.swift",
     "swift-bridge/Sources/**/*",
     "examples/**/*",
+    "tests/**/*",
     "build.rs",
     "Cargo.toml",
     "README.md",
     "LICENSE-*",
     "CHANGELOG.md",
+    "COVERAGE.md",
 ]
 
 [lints.rust]
@@ -39,6 +41,9 @@ crate-type = ["lib"]
 default = []
 
 [dependencies]
+bitflags = "2.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [package.metadata.docs.rs]
 all-features = true
