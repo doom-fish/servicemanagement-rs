@@ -22,6 +22,8 @@ impl LaunchdDomain {
     }
 
     pub(crate) fn as_cfstring(self) -> ffi::CFStringRef {
+        // SAFETY: kSMDomainSystemLaunchd and kSMDomainUserLaunchd are static CFStringRef
+        // constants defined in the FFI module. They are always valid and never null.
         unsafe {
             match self {
                 Self::System => ffi::kSMDomainSystemLaunchd,
@@ -48,6 +50,8 @@ impl SMJobBless {
     ) -> Result<Option<LegacyJobDictionary>> {
         let job_label = c_string(job_label, "sm_legacy_copy_job_dictionary")?;
         let mut error = std::ptr::null_mut();
+        // SAFETY: domain.raw_value() returns a valid i32. job_label.as_ptr() points to a valid
+        // nul-terminated C string. The FFI function returns a C string or null (checked below).
         let raw = unsafe {
             ffi::sm_legacy_copy_job_dictionary(domain.raw_value(), job_label.as_ptr(), &mut error)
         };
@@ -62,6 +66,8 @@ impl SMJobBless {
 
     pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<LegacyJobDictionary>> {
         let mut error = std::ptr::null_mut();
+        // SAFETY: domain.raw_value() returns a valid i32. The FFI function returns a C string
+        // or null (checked below), or an error pointer.
         let raw =
             unsafe { ffi::sm_legacy_copy_all_job_dictionaries(domain.raw_value(), &mut error) };
         if !error.is_null() {
@@ -77,6 +83,9 @@ impl SMJobBless {
     ) -> Result<()> {
         let plist_xml = c_string(plist_xml, "sm_legacy_job_submit_plist")?;
         let mut error = std::ptr::null_mut();
+        // SAFETY: domain.raw_value() returns valid i32. plist_xml.as_ptr() points to a valid
+        // nul-terminated C string. authorization.map_or() returns either a valid ptr from
+        // Authorization::as_ptr or null. The FFI function returns a bool status code.
         let ok = unsafe {
             ffi::sm_legacy_job_submit_plist(
                 domain.raw_value(),
@@ -100,6 +109,9 @@ impl SMJobBless {
     ) -> Result<()> {
         let job_label = c_string(job_label, "sm_legacy_job_remove")?;
         let mut error = std::ptr::null_mut();
+        // SAFETY: domain.raw_value() returns valid i32. job_label.as_ptr() points to a valid
+        // nul-terminated C string. authorization.map_or() returns either a valid ptr or null.
+        // wait is a bool. The FFI function returns a bool status code.
         let ok = unsafe {
             ffi::sm_legacy_job_remove(
                 domain.raw_value(),
@@ -123,6 +135,9 @@ impl SMJobBless {
     ) -> Result<()> {
         let executable_label = c_string(executable_label, "sm_legacy_job_bless")?;
         let mut error = std::ptr::null_mut();
+        // SAFETY: domain.raw_value() returns valid i32. executable_label.as_ptr() points to a
+        // valid nul-terminated C string. authorization.map_or() returns either a valid ptr or
+        // null. The FFI function returns a bool status code.
         let ok = unsafe {
             ffi::sm_legacy_job_bless(
                 domain.raw_value(),

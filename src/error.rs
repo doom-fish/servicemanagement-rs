@@ -83,10 +83,14 @@ impl SMErrorCode {
 }
 
 pub fn legacy_error_domain_ipc() -> Result<String> {
+    // SAFETY: kSMErrorDomainIPC is a static CFStringRef constant defined in the FFI module.
+    // It is always valid and never null.
     legacy_error_domain(unsafe { ffi::kSMErrorDomainIPC }, "kSMErrorDomainIPC")
 }
 
 pub fn legacy_error_domain_framework() -> Result<String> {
+    // SAFETY: kSMErrorDomainFramework is a static CFStringRef constant defined in the FFI
+    // module. It is always valid and never null.
     legacy_error_domain(
         unsafe { ffi::kSMErrorDomainFramework },
         "kSMErrorDomainFramework",
@@ -94,6 +98,8 @@ pub fn legacy_error_domain_framework() -> Result<String> {
 }
 
 pub fn legacy_error_domain_launchd() -> Result<String> {
+    // SAFETY: kSMErrorDomainLaunchd is a static CFStringRef constant defined in the FFI
+    // module. It is always valid and never null.
     legacy_error_domain(
         unsafe { ffi::kSMErrorDomainLaunchd },
         "kSMErrorDomainLaunchd",

@@ -19,10 +19,14 @@ pub use crate::sm_login_item::{set_enabled as login_item_set_enabled, SMLoginIte
 
 pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Option<String>> {
     let job_label = cfstring_from_str(job_label)?;
+    // SAFETY: domain.as_cfstring() returns a valid CFStringRef. job_label.as_ptr() is a
+    // valid NonNull CFStringRef pointer. SMJobCopyDictionary returns a CFDictionaryRef or null.
     let dictionary = unsafe { ffi::SMJobCopyDictionary(domain.as_cfstring(), job_label.as_ptr()) };
     if dictionary.is_null() {
         return Ok(None);
     }
+    // SAFETY: We checked dictionary is not null above. from_create_rule wraps it in a
+    // NonNull which manages the lifetime and ensures CFRelease is called on drop.
     let dictionary = unsafe { OwnedCFType::from_create_rule(dictionary) }.ok_or_else(|| {
         ServiceManagementError::new("SMJobCopyDictionary", "received null CFDictionary")
     })?;
@@ -30,16 +34,28 @@ pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Opt
 }
 
 pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<String>> {
+    // SAFETY: domain.as_cfstring() returns a valid CFStringRef. SMCopyAllJobDictionaries
+    // returns a CFArrayRef (possibly empty but never null). cfarray_descriptions handles
+    // the pointer safely.
     let dictionaries = unsafe { ffi::SMCopyAllJobDictionaries(domain.as_cfstring()) };
     cfarray_descriptions(dictionaries)
 }
 
+/// Raw CoreFoundation interface for SMJobSubmit.
+/// 
+/// # Safety
+///
+/// Caller must provide:
+/// - `domain`: a valid CFStringRef from domain.as_cfstring()
+/// - `job`: a valid CFDictionaryRef (non-null)
+/// - `authorization`: a valid AuthorizationRef or null
 pub unsafe fn job_submit_raw(
     domain: LaunchdDomain,
     job: ffi::CFDictionaryRef,
     authorization: AuthorizationRef,
 ) -> Result<()> {
     let mut error = std::ptr::null();
+    // SAFETY: Caller guarantees domain, job, and authorization are valid as documented above.
     let ok = ffi::SMJobSubmit(domain.as_cfstring(), job, authorization, &mut error);
     if ok == 0 {
         Err(take_cf_error("SMJobSubmit", error))
@@ -51,6 +67,14 @@ pub unsafe fn job_submit_raw(
     }
 }
 
+/// Raw CoreFoundation interface for SMJobRemove.
+///
+/// # Safety
+///
+/// Caller must provide:
+/// - `domain`: a valid CFStringRef from domain.as_cfstring()
+/// - `job_label`: a valid Rust str reference
+/// - `authorization`: a valid AuthorizationRef or null
 pub unsafe fn job_remove(
     domain: LaunchdDomain,
     job_label: &str,
@@ -59,6 +83,8 @@ pub unsafe fn job_remove(
 ) -> Result<()> {
     let job_label = cfstring_from_str(job_label)?;
     let mut error = std::ptr::null();
+    // SAFETY: Caller guarantees domain and authorization are valid as documented above.
+    // job_label is a valid CFStringRef from cfstring_from_str.
     let ok = ffi::SMJobRemove(
         domain.as_cfstring(),
         job_label.as_ptr(),
@@ -76,6 +102,14 @@ pub unsafe fn job_remove(
     }
 }
 
+/// Raw CoreFoundation interface for SMJobBless.
+///
+/// # Safety
+///
+/// Caller must provide:
+/// - `domain`: a valid CFStringRef from domain.as_cfstring()
+/// - `executable_label`: a valid Rust str reference
+/// - `authorization`: a valid AuthorizationRef or null
 pub unsafe fn job_bless(
     domain: LaunchdDomain,
     executable_label: &str,
@@ -83,6 +117,8 @@ pub unsafe fn job_bless(
 ) -> Result<()> {
     let executable_label = cfstring_from_str(executable_label)?;
     let mut error = std::ptr::null();
+    // SAFETY: Caller guarantees domain and authorization are valid as documented above.
+    // executable_label is a valid CFStringRef from cfstring_from_str.
     let ok = ffi::SMJobBless(
         domain.as_cfstring(),
         executable_label.as_ptr(),
@@ -99,6 +135,8 @@ pub unsafe fn job_bless(
     }
 }
 
+// SAFETY: Only called from error paths within unsafe functions, with error pointers
+// guaranteed to be non-null by the caller. CFRelease is safe to call on valid CFError pointers.
 unsafe fn take_cf_error(function: &'static str, error: *const c_void) -> ServiceManagementError {
     if error.is_null() {
         return ServiceManagementError::new(function, "operation failed without a CFError");

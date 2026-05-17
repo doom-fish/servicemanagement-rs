@@ -49,6 +49,8 @@ pub struct Authorization(NonNull<c_void>);
 impl Authorization {
     pub fn new(flags: AuthorizationFlags) -> Result<Self> {
         let mut error = std::ptr::null_mut();
+        // SAFETY: The FFI function returns a valid opaque pointer or null on error. The pointer
+        // is consumed immediately by from_raw() which validates it or returns an error.
         let raw = unsafe { ffi::sm_authorization_create(flags.bits(), &mut error) };
         Self::from_raw(raw, error, "sm_authorization_create")
     }
@@ -60,6 +62,8 @@ impl Authorization {
 
         let rights = rights_payload(rights, "sm_authorization_create_with_rights")?;
         let mut error = std::ptr::null_mut();
+        // SAFETY: rights.as_ptr() points to a valid nul-terminated C string from CString.
+        // The FFI function returns a valid pointer or null on error, consumed by from_raw().
         let raw = unsafe {
             ffi::sm_authorization_create_with_rights(rights.as_ptr(), flags.bits(), &mut error)
         };
@@ -73,6 +77,9 @@ impl Authorization {
     ) -> Result<()> {
         let rights = rights_payload(rights, "sm_authorization_copy_rights")?;
         let mut error = std::ptr::null_mut();
+        // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
+        // rights.as_ptr() points to valid nul-terminated C string. The FFI function validates
+        // its arguments and returns a bool status code.
         let ok = unsafe {
             ffi::sm_authorization_copy_rights(
                 self.0.as_ptr(),
@@ -90,6 +97,8 @@ impl Authorization {
 
     pub fn external_form(&self) -> Result<String> {
         let mut error = std::ptr::null_mut();
+        // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
+        // The FFI function returns a pointer to a C string that must be freed via sm_string_free.
         let raw = unsafe { ffi::sm_authorization_external_form(self.0.as_ptr(), &mut error) };
         if !error.is_null() {
             return Err(bridge_error("sm_authorization_external_form", error));
@@ -100,12 +109,17 @@ impl Authorization {
     pub fn from_external_form(form: &str) -> Result<Self> {
         let form = c_string(form, "sm_authorization_from_external_form")?;
         let mut error = std::ptr::null_mut();
+        // SAFETY: form.as_ptr() points to a valid nul-terminated C string from CString.
+        // The FFI function returns a valid pointer or null on error, consumed by from_raw().
         let raw = unsafe { ffi::sm_authorization_from_external_form(form.as_ptr(), &mut error) };
         Self::from_raw(raw, error, "sm_authorization_from_external_form")
     }
 
     pub fn destroy_rights(self) -> Result<()> {
         let mut error = std::ptr::null_mut();
+        // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
+        // The FFI function validates its argument and returns a bool status code. self is
+        // consumed, preventing further use after destroy_rights() is called.
         let ok = unsafe { ffi::sm_authorization_destroy_rights(self.0.as_ptr(), &mut error) };
         if ok {
             Ok(())
@@ -127,6 +141,8 @@ impl Authorization {
 
 impl Drop for Authorization {
     fn drop(&mut self) {
+        // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
+        // Calling sm_authorization_release on a valid pointer is safe; it handles null internally.
         unsafe { ffi::sm_authorization_release(self.0.as_ptr()) };
     }
 }
