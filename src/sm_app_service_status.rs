@@ -5,12 +5,18 @@ use crate::{
     ffi, Result, ServiceManagementError,
 };
 
+/// Mirrors `ServiceManagement.SMAppService.Status`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum SMAppServiceStatus {
+    /// Corresponds to `SMAppService.Status.notRegistered`.
     NotRegistered,
+    /// Corresponds to `SMAppService.Status.enabled`.
     Enabled,
+    /// Corresponds to `SMAppService.Status.requiresApproval`.
     RequiresApproval,
+    /// Corresponds to `SMAppService.Status.notFound`.
     NotFound,
+    /// Preserves an unknown raw status value from ServiceManagement.
     Unknown(i32),
 }
 
@@ -25,6 +31,7 @@ impl SMAppServiceStatus {
         }
     }
 
+    /// Returns the raw ServiceManagement status value.
     pub const fn raw_value(self) -> i32 {
         match self {
             Self::NotRegistered => 0,
@@ -35,6 +42,7 @@ impl SMAppServiceStatus {
         }
     }
 
+    /// Returns the canonical ServiceManagement status string.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::NotRegistered => "notRegistered",
@@ -46,6 +54,7 @@ impl SMAppServiceStatus {
     }
 }
 
+/// Returns the ServiceManagement status for a legacy launchd plist path.
 pub fn status_for_legacy_plist(path: impl AsRef<Path>) -> Result<SMAppServiceStatus> {
     let path = path_c_string(path.as_ref(), "sm_app_service_status_for_legacy_plist")?;
     let mut error = std::ptr::null_mut();

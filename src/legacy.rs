@@ -3,18 +3,23 @@ use crate::{
     ffi, Result, ServiceManagementError,
 };
 
+/// Re-exports legacy authorization helpers used with ServiceManagement.
 pub use crate::authorization::{
     Authorization, AuthorizationFlags, AuthorizationRight, SM_RIGHT_BLESS_PRIVILEGED_HELPER,
     SM_RIGHT_MODIFY_SYSTEM_DAEMONS,
 };
+/// Re-exports the raw legacy ServiceManagement `AuthorizationRef` type.
 pub use crate::ffi::AuthorizationRef;
+/// Re-exports legacy `SMJobBless` helpers from ServiceManagement.
 pub use crate::sm_job_bless::{
     bless as bless_plist, copy_all_job_dictionaries as copy_all_job_dictionaries_structured,
     copy_job_dictionary, job_remove as job_remove_plist, job_submit_plist, LaunchdDomain,
     LegacyJobDictionary, SMJobBless,
 };
+/// Re-exports the legacy `SMLoginItemSetEnabled` wrapper.
 pub use crate::sm_login_item::{set_enabled as login_item_set_enabled, SMLoginItem};
 
+/// Returns the `SMJobCopyDictionary` description for a matching launchd job.
 pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Option<String>> {
     let job_label = cfstring_from_str(job_label)?;
     // SAFETY: domain.as_cfstring() returns a valid CFStringRef. job_label.as_ptr() is a
@@ -32,6 +37,7 @@ pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Opt
     copy_description(dictionary.as_ptr()).map(Some)
 }
 
+/// Returns `SMCopyAllJobDictionaries` descriptions for a launchd domain.
 pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<String>> {
     // SAFETY: domain.as_cfstring() returns a valid CFStringRef. SMCopyAllJobDictionaries
     // returns a CFArrayRef (possibly empty but never null). cfarray_descriptions handles

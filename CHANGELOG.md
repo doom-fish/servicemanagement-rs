@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.3] - 2026-05-18
+
+### Changed
+
+- Added concise rustdoc comments across the public ServiceManagement APIs outside `ffi`.
+
 ## [0.3.2] - 2026-05-18
 
 ### Changed

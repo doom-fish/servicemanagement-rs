@@ -10,26 +10,40 @@ use crate::{
     ffi, Result, ServiceManagementError,
 };
 
+/// Authorization right string for ServiceManagement privileged helper installation.
 pub const SM_RIGHT_BLESS_PRIVILEGED_HELPER: &str = "com.apple.ServiceManagement.blesshelper";
+/// Authorization right string for ServiceManagement system daemon changes.
 pub const SM_RIGHT_MODIFY_SYSTEM_DAEMONS: &str = "com.apple.ServiceManagement.daemons.modify";
 
 bitflags! {
+    /// Security authorization flags used by ServiceManagement helper operations.
     #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
     pub struct AuthorizationFlags: u32 {
+        /// Mirrors the default Security authorization flags.
         const DEFAULTS = 0;
+        /// Allows Security authorization UI during ServiceManagement requests.
         const INTERACTION_ALLOWED = 1 << 0;
+        /// Requests Security to extend rights for ServiceManagement operations.
         const EXTEND_RIGHTS = 1 << 1;
+        /// Accepts partial Security authorization rights when available.
         const PARTIAL_RIGHTS = 1 << 2;
+        /// Destroys granted Security authorization rights on release.
         const DESTROY_RIGHTS = 1 << 3;
+        /// Preauthorizes Security authorization rights when possible.
         const PREAUTHORIZE = 1 << 4;
+        /// Skips internal authorization checks for legacy ServiceManagement flows.
         const SKIP_INTERNAL_AUTH = 1 << 9;
     }
 }
 
+/// Authorization rights accepted by ServiceManagement helper APIs.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum AuthorizationRight {
+    /// Uses the ServiceManagement privileged helper right string.
     BlessPrivilegedHelper,
+    /// Uses the ServiceManagement system daemon modification right string.
     ModifySystemDaemons,
+    /// Uses a custom authorization right string.
     Custom(String),
 }
 
@@ -43,10 +57,12 @@ impl AuthorizationRight {
     }
 }
 
+/// Owns a Security `AuthorizationRef` for ServiceManagement calls.
 #[derive(Debug)]
 pub struct Authorization(NonNull<c_void>);
 
 impl Authorization {
+    /// Creates a Security authorization reference for ServiceManagement use.
     pub fn new(flags: AuthorizationFlags) -> Result<Self> {
         let mut error = std::ptr::null_mut();
         // SAFETY: The FFI function returns a valid opaque pointer or null on error. The pointer
@@ -55,6 +71,7 @@ impl Authorization {
         Self::from_raw(raw, error, "sm_authorization_create")
     }
 
+    /// Creates a Security authorization reference with explicit ServiceManagement rights.
     pub fn with_rights(rights: &[AuthorizationRight], flags: AuthorizationFlags) -> Result<Self> {
         if rights.is_empty() {
             return Self::new(flags);
@@ -70,6 +87,7 @@ impl Authorization {
         Self::from_raw(raw, error, "sm_authorization_create_with_rights")
     }
 
+    /// Copies additional Security authorization rights onto this reference.
     pub fn copy_rights(
         &self,
         rights: &[AuthorizationRight],
@@ -95,6 +113,7 @@ impl Authorization {
         }
     }
 
+    /// Returns the external-form string for this Security authorization reference.
     pub fn external_form(&self) -> Result<String> {
         let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
@@ -106,6 +125,7 @@ impl Authorization {
         take_bridge_string(raw, "sm_authorization_external_form")
     }
 
+    /// Restores a Security authorization reference from an external-form string.
     pub fn from_external_form(form: &str) -> Result<Self> {
         let form = c_string(form, "sm_authorization_from_external_form")?;
         let mut error = std::ptr::null_mut();
@@ -115,6 +135,7 @@ impl Authorization {
         Self::from_raw(raw, error, "sm_authorization_from_external_form")
     }
 
+    /// Destroys the Security authorization rights held by this reference.
     pub fn destroy_rights(self) -> Result<()> {
         let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.

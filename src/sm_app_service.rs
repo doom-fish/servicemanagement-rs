@@ -8,10 +8,12 @@ use crate::{
     ffi, Result, SMAppServiceStatus,
 };
 
+/// Wraps a `ServiceManagement.SMAppService` instance.
 #[derive(Debug)]
 pub struct SMAppService(NonNull<c_void>);
 
 impl SMAppService {
+    /// Returns the ServiceManagement main app service.
     pub fn main_app() -> Result<Self> {
         let mut error = std::ptr::null_mut();
         // SAFETY: The FFI function returns a valid opaque pointer or null on error. The pointer
@@ -20,6 +22,7 @@ impl SMAppService {
         Self::from_raw(raw, error, "sm_app_service_main_app")
     }
 
+    /// Returns the ServiceManagement login item service for a bundle identifier.
     pub fn login_item(identifier: &str) -> Result<Self> {
         let identifier = c_string(identifier, "sm_app_service_login_item")?;
         let mut error = std::ptr::null_mut();
@@ -29,6 +32,7 @@ impl SMAppService {
         Self::from_raw(raw, error, "sm_app_service_login_item")
     }
 
+    /// Returns the ServiceManagement agent service for a launch agent plist.
     pub fn agent(plist_name: &str) -> Result<Self> {
         let plist_name = c_string(plist_name, "sm_app_service_agent")?;
         let mut error = std::ptr::null_mut();
@@ -38,6 +42,7 @@ impl SMAppService {
         Self::from_raw(raw, error, "sm_app_service_agent")
     }
 
+    /// Returns the ServiceManagement daemon service for a launch daemon plist.
     pub fn daemon(plist_name: &str) -> Result<Self> {
         let plist_name = c_string(plist_name, "sm_app_service_daemon")?;
         let mut error = std::ptr::null_mut();
@@ -47,6 +52,7 @@ impl SMAppService {
         Self::from_raw(raw, error, "sm_app_service_daemon")
     }
 
+    /// Returns the current `ServiceManagement.SMAppService.Status` for this service.
     pub fn status(&self) -> SMAppServiceStatus {
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
         // The FFI function returns an enum value (stateless, no lifetime issues).
@@ -54,6 +60,7 @@ impl SMAppService {
         SMAppServiceStatus::from_raw(raw)
     }
 
+    /// Registers this ServiceManagement service with the system.
     pub fn register(&self) -> Result<()> {
         let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
@@ -66,6 +73,7 @@ impl SMAppService {
         }
     }
 
+    /// Unregisters this ServiceManagement service from the system.
     pub fn unregister(&self) -> Result<()> {
         let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
@@ -78,6 +86,7 @@ impl SMAppService {
         }
     }
 
+    /// Unregisters this ServiceManagement service using the completion-handler variant.
     pub fn unregister_with_completion_handler(&self) -> Result<()> {
         let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
@@ -115,6 +124,7 @@ impl Drop for SMAppService {
     }
 }
 
+/// Opens the Login Items settings pane used by ServiceManagement services.
 pub fn open_system_settings_login_items() -> Result<()> {
     let mut error = std::ptr::null_mut();
     // SAFETY: The FFI function takes no pointer arguments other than an error pointer.
@@ -127,6 +137,7 @@ pub fn open_system_settings_login_items() -> Result<()> {
     }
 }
 
+/// Returns the `SMAppServiceErrorDomain` string from ServiceManagement.
 pub fn app_service_error_domain() -> Result<String> {
     let mut error = std::ptr::null_mut();
     // SAFETY: The FFI function returns a pointer to a C string that must be freed via

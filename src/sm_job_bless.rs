@@ -7,9 +7,12 @@ use crate::{
     ffi, Authorization, Result, ServiceManagementError,
 };
 
+/// Selects a launchd domain for legacy ServiceManagement operations.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum LaunchdDomain {
+    /// Corresponds to `kSMDomainSystemLaunchd`.
     System,
+    /// Corresponds to `kSMDomainUserLaunchd`.
     User,
 }
 
@@ -33,17 +36,23 @@ impl LaunchdDomain {
     }
 }
 
+/// Structured result returned by legacy `SMJobCopyDictionary` helpers.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct LegacyJobDictionary {
+    /// Launchd job label from the ServiceManagement dictionary, if present.
     pub label: Option<String>,
+    /// XML plist payload returned by ServiceManagement.
     pub plist_xml: String,
+    /// Human-readable Core Foundation description of the dictionary.
     pub description: String,
 }
 
+/// Namespace for legacy `SMJobBless`-style ServiceManagement helpers.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct SMJobBless;
 
 impl SMJobBless {
+    /// Returns the legacy `SMJobCopyDictionary` result for a label.
     pub fn copy_job_dictionary(
         domain: LaunchdDomain,
         job_label: &str,
@@ -64,6 +73,7 @@ impl SMJobBless {
         parse_json(raw, "sm_legacy_copy_job_dictionary").map(Some)
     }
 
+    /// Returns all legacy `SMCopyAllJobDictionaries` results for a domain.
     pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<LegacyJobDictionary>> {
         let mut error = std::ptr::null_mut();
         // SAFETY: domain.raw_value() returns a valid i32. The FFI function returns a C string
@@ -76,6 +86,7 @@ impl SMJobBless {
         parse_json(raw, "sm_legacy_copy_all_job_dictionaries")
     }
 
+    /// Submits a launchd plist with legacy `SMJobSubmit`.
     pub fn job_submit_plist(
         domain: LaunchdDomain,
         plist_xml: &str,
@@ -101,6 +112,7 @@ impl SMJobBless {
         }
     }
 
+    /// Removes a launchd job with legacy `SMJobRemove`.
     pub fn job_remove(
         domain: LaunchdDomain,
         job_label: &str,
@@ -128,6 +140,7 @@ impl SMJobBless {
         }
     }
 
+    /// Installs a privileged helper with legacy `SMJobBless`.
     pub fn bless(
         domain: LaunchdDomain,
         executable_label: &str,
@@ -154,6 +167,7 @@ impl SMJobBless {
     }
 }
 
+/// Convenience wrapper around `SMJobBless::copy_job_dictionary`.
 pub fn copy_job_dictionary(
     domain: LaunchdDomain,
     job_label: &str,
@@ -161,10 +175,12 @@ pub fn copy_job_dictionary(
     SMJobBless::copy_job_dictionary(domain, job_label)
 }
 
+/// Convenience wrapper around `SMJobBless::copy_all_job_dictionaries`.
 pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<LegacyJobDictionary>> {
     SMJobBless::copy_all_job_dictionaries(domain)
 }
 
+/// Convenience wrapper around `SMJobBless::job_submit_plist`.
 pub fn job_submit_plist(
     domain: LaunchdDomain,
     plist_xml: &str,
@@ -173,6 +189,7 @@ pub fn job_submit_plist(
     SMJobBless::job_submit_plist(domain, plist_xml, authorization)
 }
 
+/// Convenience wrapper around `SMJobBless::job_remove`.
 pub fn job_remove(
     domain: LaunchdDomain,
     job_label: &str,
@@ -182,6 +199,7 @@ pub fn job_remove(
     SMJobBless::job_remove(domain, job_label, authorization, wait)
 }
 
+/// Convenience wrapper around `SMJobBless::bless`.
 pub fn bless(
     domain: LaunchdDomain,
     executable_label: &str,
