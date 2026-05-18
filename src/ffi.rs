@@ -3,8 +3,7 @@
 use std::ffi::{c_char, c_void};
 
 pub type AuthorizationRef = *mut c_void;
-pub type Boolean = u8;
-pub use apple_cf::raw::{CFArrayRef, CFDictionaryRef, CFErrorRef, CFStringRef};
+pub use apple_cf::raw::{Boolean, CFArrayRef, CFDictionaryRef, CFErrorRef, CFStringRef};
 
 unsafe extern "C" {
     pub static kSMDomainSystemLaunchd: CFStringRef;
