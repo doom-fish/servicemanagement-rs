@@ -2,7 +2,7 @@
 
 Safe Rust bindings for Apple’s `ServiceManagement.framework` on macOS.
 
-`servicemanagement-rs` 0.2 covers the full public framework surface exposed by
+`servicemanagement-rs` 0.3 covers the full public framework surface exposed by
 Apple’s SDK, split into focused Swift bridge files and Rust modules for each
 logical area:
 
@@ -17,13 +17,14 @@ logical area:
 - `Authorization`
 
 It also preserves the original low-level `legacy` module for callers that still
-need raw `CFDictionaryRef` / `AuthorizationRef` access.
+need raw `CFDictionaryRef` / `AuthorizationRef` access, with the Core
+Foundation typedefs re-exported from `apple-cf`.
 
 ## Installation
 
 ```toml
 [dependencies]
-servicemanagement-rs = "0.2"
+servicemanagement-rs = "0.3"
 ```
 
 ## Quick start

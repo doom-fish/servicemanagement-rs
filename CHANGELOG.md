@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0] - 2026-05-18
+
+### Changed
+
+- Added a direct `apple-cf` dependency for shared Core Foundation raw typedefs.
+- Re-exported `CFArrayRef`, `CFDictionaryRef`, `CFErrorRef`, and `CFStringRef`
+  from `apple-cf` and updated the legacy Core Foundation call sites to use the
+  shared definitions.
+
+### Breaking
+
+- `servicemanagement::ffi` now exposes those four Core Foundation typedefs from
+  `apple-cf`, including the SDK-backed `CFErrorRef` pointer type.
+
 ## [0.2.1] - 2025-05-17
 
 ### Fixed

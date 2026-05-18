@@ -15,8 +15,8 @@ impl OwnedCFType {
         self.0.as_ptr().cast_const()
     }
 
-    pub(crate) unsafe fn from_create_rule(raw: *const c_void) -> Option<Self> {
-        NonNull::new(raw.cast_mut()).map(Self)
+    pub(crate) unsafe fn from_create_rule<T>(raw: *const T) -> Option<Self> {
+        NonNull::new(raw.cast_mut().cast()).map(Self)
     }
 }
 
@@ -62,7 +62,7 @@ pub(crate) fn cfstring_from_str(value: &str) -> Result<OwnedCFType> {
     })
 }
 
-pub(crate) fn cfstring_to_string(string_ref: *const c_void) -> Result<String> {
+pub(crate) fn cfstring_to_string(string_ref: ffi::CFStringRef) -> Result<String> {
     // SAFETY: string_ref is assumed to be a valid CFString pointer (guaranteed by callers).
     // CFStringGetLength returns a CFIndex (valid) and cannot fail.
     let length = unsafe { ffi::CFStringGetLength(string_ref) };
@@ -104,21 +104,21 @@ pub(crate) fn copy_description(value: *const c_void) -> Result<String> {
         unsafe { OwnedCFType::from_create_rule(description_ref) }.ok_or_else(|| {
             ServiceManagementError::new("CFCopyDescription", "received null description")
         })?;
-    cfstring_to_string(description.as_ptr())
+    cfstring_to_string(description.as_ptr().cast())
 }
 
-pub(crate) fn cfarray_descriptions(array_ref: *const c_void) -> Result<Vec<String>> {
+pub(crate) fn cfarray_descriptions(array_ref: ffi::CFArrayRef) -> Result<Vec<String>> {
     // SAFETY: We check for null via ok_or_else, so from_create_rule only called on valid ptr.
     let array = unsafe { OwnedCFType::from_create_rule(array_ref) }.ok_or_else(|| {
         ServiceManagementError::new("SMCopyAllJobDictionaries", "received null CFArray")
     })?;
     // SAFETY: array.as_ptr() is a valid CFArray pointer. CFArrayGetCount returns count.
-    let count = unsafe { ffi::CFArrayGetCount(array.as_ptr()) };
+    let count = unsafe { ffi::CFArrayGetCount(array.as_ptr().cast()) };
     (0..count)
         .map(|index| {
             // SAFETY: array.as_ptr() is a valid CFArray. CFArrayGetValueAtIndex returns
             // a pointer to a CFValue (dictionary) within the array.
-            let value = unsafe { ffi::CFArrayGetValueAtIndex(array.as_ptr(), index) };
+            let value = unsafe { ffi::CFArrayGetValueAtIndex(array.as_ptr().cast(), index) };
             copy_description(value)
         })
         .collect()

@@ -1,5 +1,3 @@
-use std::ffi::c_void;
-
 use crate::{
     cf::{cfarray_descriptions, cfstring_from_str, copy_description, OwnedCFType},
     ffi, Result, ServiceManagementError,
@@ -21,7 +19,8 @@ pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Opt
     let job_label = cfstring_from_str(job_label)?;
     // SAFETY: domain.as_cfstring() returns a valid CFStringRef. job_label.as_ptr() is a
     // valid NonNull CFStringRef pointer. SMJobCopyDictionary returns a CFDictionaryRef or null.
-    let dictionary = unsafe { ffi::SMJobCopyDictionary(domain.as_cfstring(), job_label.as_ptr()) };
+    let dictionary =
+        unsafe { ffi::SMJobCopyDictionary(domain.as_cfstring(), job_label.as_ptr().cast()) };
     if dictionary.is_null() {
         return Ok(None);
     }
@@ -42,7 +41,7 @@ pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<String>> {
 }
 
 /// Raw CoreFoundation interface for SMJobSubmit.
-/// 
+///
 /// # Safety
 ///
 /// Caller must provide:
@@ -54,14 +53,14 @@ pub unsafe fn job_submit_raw(
     job: ffi::CFDictionaryRef,
     authorization: AuthorizationRef,
 ) -> Result<()> {
-    let mut error = std::ptr::null();
+    let mut error = std::ptr::null_mut();
     // SAFETY: Caller guarantees domain, job, and authorization are valid as documented above.
     let ok = ffi::SMJobSubmit(domain.as_cfstring(), job, authorization, &mut error);
     if ok == 0 {
         Err(take_cf_error("SMJobSubmit", error))
     } else {
         if !error.is_null() {
-            ffi::CFRelease(error);
+            ffi::CFRelease(error.cast());
         }
         Ok(())
     }
@@ -82,12 +81,12 @@ pub unsafe fn job_remove(
     wait: bool,
 ) -> Result<()> {
     let job_label = cfstring_from_str(job_label)?;
-    let mut error = std::ptr::null();
+    let mut error = std::ptr::null_mut();
     // SAFETY: Caller guarantees domain and authorization are valid as documented above.
     // job_label is a valid CFStringRef from cfstring_from_str.
     let ok = ffi::SMJobRemove(
         domain.as_cfstring(),
-        job_label.as_ptr(),
+        job_label.as_ptr().cast(),
         authorization,
         u8::from(wait),
         &mut error,
@@ -96,7 +95,7 @@ pub unsafe fn job_remove(
         Err(take_cf_error("SMJobRemove", error))
     } else {
         if !error.is_null() {
-            ffi::CFRelease(error);
+            ffi::CFRelease(error.cast());
         }
         Ok(())
     }
@@ -116,12 +115,12 @@ pub unsafe fn job_bless(
     authorization: AuthorizationRef,
 ) -> Result<()> {
     let executable_label = cfstring_from_str(executable_label)?;
-    let mut error = std::ptr::null();
+    let mut error = std::ptr::null_mut();
     // SAFETY: Caller guarantees domain and authorization are valid as documented above.
     // executable_label is a valid CFStringRef from cfstring_from_str.
     let ok = ffi::SMJobBless(
         domain.as_cfstring(),
-        executable_label.as_ptr(),
+        executable_label.as_ptr().cast(),
         authorization,
         &mut error,
     );
@@ -129,7 +128,7 @@ pub unsafe fn job_bless(
         Err(take_cf_error("SMJobBless", error))
     } else {
         if !error.is_null() {
-            ffi::CFRelease(error);
+            ffi::CFRelease(error.cast());
         }
         Ok(())
     }
@@ -137,13 +136,13 @@ pub unsafe fn job_bless(
 
 // SAFETY: Only called from error paths within unsafe functions, with error pointers
 // guaranteed to be non-null by the caller. CFRelease is safe to call on valid CFError pointers.
-unsafe fn take_cf_error(function: &'static str, error: *const c_void) -> ServiceManagementError {
+unsafe fn take_cf_error(function: &'static str, error: ffi::CFErrorRef) -> ServiceManagementError {
     if error.is_null() {
         return ServiceManagementError::new(function, "operation failed without a CFError");
     }
 
-    let message = crate::cf::copy_description(error)
+    let message = crate::cf::copy_description(error.cast())
         .unwrap_or_else(|_| "operation failed without a readable CFError".to_string());
-    ffi::CFRelease(error);
+    ffi::CFRelease(error.cast());
     ServiceManagementError::new(function, message)
 }
