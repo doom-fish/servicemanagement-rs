@@ -10,6 +10,25 @@ final class SMAppServiceHolder: NSObject {
   }
 }
 
+public typealias SMAppServiceUnitCallback = @convention(c) (
+  UnsafeMutableRawPointer?,
+  UnsafeMutablePointer<CChar>?
+) -> Void
+
+public typealias SMAppServiceStatusCallback = @convention(c) (
+  UnsafeMutableRawPointer?,
+  Int32,
+  UnsafeMutablePointer<CChar>?
+) -> Void
+
+final class SMAppServiceAsyncBox: @unchecked Sendable {
+  let service: SMAppService
+
+  init(_ service: SMAppService) {
+    self.service = service
+  }
+}
+
 func smRetainedAppService(_ service: SMAppService) -> UnsafeMutableRawPointer {
   smRetain(SMAppServiceHolder(service))
 }
@@ -134,6 +153,60 @@ public func sm_app_service_unregister(
   } catch {
     smSetError(errorOut, smNSErrorMessage(error))
     return false
+  }
+}
+
+@_cdecl("sm_app_service_register_async")
+public func sm_app_service_register_async(
+  _ rawService: UnsafeMutableRawPointer?,
+  _ context: UnsafeMutableRawPointer?,
+  _ callback: SMAppServiceUnitCallback?
+) {
+  guard let callback else {
+    return
+  }
+
+  var bridgeError: UnsafeMutablePointer<CChar>?
+  guard let service = smBorrowAppService(rawService, &bridgeError) else {
+    callback(context, bridgeError)
+    return
+  }
+
+  let serviceBox = SMAppServiceAsyncBox(service)
+  DispatchQueue.global(qos: .userInitiated).async {
+    do {
+      try serviceBox.service.register()
+      callback(context, nil)
+    } catch {
+      callback(context, smCString(smNSErrorMessage(error)))
+    }
+  }
+}
+
+@_cdecl("sm_app_service_unregister_async")
+public func sm_app_service_unregister_async(
+  _ rawService: UnsafeMutableRawPointer?,
+  _ context: UnsafeMutableRawPointer?,
+  _ callback: SMAppServiceUnitCallback?
+) {
+  guard let callback else {
+    return
+  }
+
+  var bridgeError: UnsafeMutablePointer<CChar>?
+  guard let service = smBorrowAppService(rawService, &bridgeError) else {
+    callback(context, bridgeError)
+    return
+  }
+
+  let serviceBox = SMAppServiceAsyncBox(service)
+  serviceBox.service.unregister { [serviceBox] error in
+    _ = serviceBox
+    if let error {
+      callback(context, smCString(smNSErrorMessage(error)))
+    } else {
+      callback(context, nil)
+    }
   }
 }
 

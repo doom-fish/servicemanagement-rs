@@ -104,6 +104,10 @@ impl SMAppService {
         }
     }
 
+    pub(crate) const fn as_ptr(&self) -> *mut c_void {
+        self.0.as_ptr()
+    }
+
     pub(crate) fn from_raw(
         raw: *mut c_void,
         error: *mut c_char,

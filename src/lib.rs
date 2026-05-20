@@ -19,6 +19,10 @@ compile_error!("servicemanagement only supports macOS");
 /// ServiceManagement framework agent service wrappers.
 pub mod agent_service;
 mod app_service;
+/// Executor-agnostic async `ServiceManagement` wrappers.
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub mod async_api;
 /// ServiceManagement framework authorization helpers.
 pub mod authorization;
 mod bridge;
