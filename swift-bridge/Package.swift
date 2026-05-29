@@ -15,7 +15,6 @@ let package = Package(
     targets: [
         .target(
             name: "ServiceManagementBridge",
-            path: "Sources/ServiceManagementBridge",
-            publicHeadersPath: "include")
+            path: "Sources/ServiceManagementBridge")
     ]
 )
