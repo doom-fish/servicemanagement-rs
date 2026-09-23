@@ -2,9 +2,9 @@
 
 Safe Rust bindings for Apple’s `ServiceManagement.framework` on macOS.
 
-`servicemanagement-rs` 0.3 covers the full public framework surface exposed by
-Apple’s SDK, split into focused Swift bridge files and Rust modules for each
-logical area:
+`servicemanagement-rs` wraps every public symbol in Apple’s ServiceManagement
+headers (see [`COVERAGE.md`](COVERAGE.md)), split into focused Swift bridge
+files and Rust modules for each logical area:
 
 - `SMAppService`
 - `SMAppServiceStatus`
@@ -24,8 +24,10 @@ Foundation typedefs re-exported from `apple-cf`.
 
 ```toml
 [dependencies]
-servicemanagement-rs = "0.3"
+servicemanagement-rs = "0.5"
 ```
+
+Requires macOS 13 or later and Rust 1.82 or later.
 
 ## Quick start
 
@@ -62,16 +64,59 @@ All numbered examples are headless-friendly and exit successfully on macOS even
 when a given API requires additional signing, entitlement, or privileged-helper
 setup.
 
+## Errors
+
+`ServiceManagementError` keeps the framework's error `domain` and `code` next to
+the message. `sm_error_code()` maps codes from `SMAppServiceErrorDomain` and
+`kSMErrorDomainFramework` to `SMErrorCode`, so callers can react to
+`LaunchDeniedByUser`, `AlreadyRegistered`, `InvalidSignature` and the rest:
+
+```rust,no_run
+use servicemanagement::{SMAppService, SMErrorCode};
+
+fn register_agent() -> servicemanagement::Result<()> {
+    let agent = SMAppService::agent("com.example.agent.plist")?;
+    match agent.register() {
+        Err(error) if error.sm_error_code() == Some(SMErrorCode::AlreadyRegistered) => Ok(()),
+        other => other,
+    }
+}
+```
+
+`SMAppService::unregister_with_completion_handler(timeout)` gives up after
+`timeout`; `ServiceManagementError::is_timeout()` tells that case apart.
+
+## Legacy privileged helpers
+
+`SMJobBless`, `SMJobSubmit`, `SMJobRemove`, `SMJobCopyDictionary`,
+`SMCopyAllJobDictionaries` and `SMLoginItemSetEnabled` are deprecated by Apple,
+and their wrappers are `#[deprecated]`. Use `SMAppService` (`DaemonService`,
+`AgentService`, `LoginItem`) instead.
+
+A helper installed with `SMJobBless` or registered as a daemon runs as root and
+accepts requests from any process that can reach its XPC service. It must check
+every client before acting: identify the client by its audit token (never by
+PID, which can be reused) and validate its code signature against a code
+requirement. [security-rs](https://crates.io/crates/security-rs) provides this
+with `Code::guest_with_audit_token`, `Code::check_validity` and
+`Code::from_xpc_message`.
+
+## Authorization
+
+This crate keeps its own `Authorization` type: it links its own Swift bridge,
+which cannot share handles with security-rs, and depending on security-rs would
+pull that whole bridge into every user. The two interoperate through
+`AuthorizationExternalForm`: `external_form()` returns the same 32 bytes as
+security-rs `Authorization::external_form()`, and each crate's
+`from_external_form` accepts the other's bytes.
+
 ## API notes
 
-- `SMAppService` requires macOS 13+ at runtime.
 - `app_service_error_domain()` requires macOS 15+ at runtime because Apple only
   added `SMAppServiceErrorDomain` in the macOS 15 SDK/runtime.
 - The safe legacy job helpers use XML property lists and JSON bridge payloads,
-  while the original raw `legacy::*_raw` functions remain available for direct
-  CoreFoundation interop.
-- `SMJobBless`, `SMJobSubmit`, `SMJobRemove`, and `SMLoginItemSetEnabled` are
-  deprecated by Apple but retained here for full framework coverage.
+  while the `unsafe` `legacy::job_submit_raw`, `legacy::job_remove` and
+  `legacy::job_bless` take raw CoreFoundation and `AuthorizationRef` values.
 
 ## Coverage audit
 
