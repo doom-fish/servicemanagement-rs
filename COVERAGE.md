@@ -13,12 +13,12 @@ Audited against:
 | `kSMRightModifySystemDaemons` | ✅ implemented | `authorization::SM_RIGHT_MODIFY_SYSTEM_DAEMONS` |
 | `kSMDomainSystemLaunchd` | ✅ implemented | `LaunchdDomain::System` |
 | `kSMDomainUserLaunchd` | ✅ implemented | `LaunchdDomain::User` |
-| `SMJobCopyDictionary` | ✅ implemented | `SMJobBless::copy_job_dictionary`, `legacy::job_copy_dictionary` |
-| `SMCopyAllJobDictionaries` | ✅ implemented | `SMJobBless::copy_all_job_dictionaries`, `legacy::copy_all_job_dictionaries` |
-| `SMJobSubmit` | ✅ implemented | `SMJobBless::job_submit_plist`, `legacy::job_submit_raw` |
-| `SMJobRemove` | ✅ implemented | `SMJobBless::job_remove`, `legacy::job_remove` |
-| `SMJobBless` | ✅ implemented | `SMJobBless::bless`, `legacy::job_bless` |
-| `SMLoginItemSetEnabled` | ✅ implemented | `SMLoginItem::set_enabled` |
+| `SMJobCopyDictionary` | ✅ implemented (deprecated) | `SMJobBless::copy_job_dictionary`, `legacy::job_copy_dictionary` |
+| `SMCopyAllJobDictionaries` | ✅ implemented (deprecated) | `SMJobBless::copy_all_job_dictionaries` (re-exported as `copy_all_job_dictionaries` and `legacy::copy_all_job_dictionaries`) |
+| `SMJobSubmit` | ✅ implemented (deprecated) | `SMJobBless::job_submit_plist`, `legacy::job_submit_raw` |
+| `SMJobRemove` | ✅ implemented (deprecated) | `SMJobBless::job_remove`, `legacy::job_remove` |
+| `SMJobBless` | ✅ implemented (deprecated) | `SMJobBless::bless`, `legacy::job_bless` |
+| `SMLoginItemSetEnabled` | ✅ implemented (deprecated) | `SMLoginItem::set_enabled` |
 | `kSMErrorDomainIPC` | ✅ implemented | `legacy_error_domain_ipc()` |
 | `kSMErrorDomainFramework` | ✅ implemented | `legacy_error_domain_framework()` |
 | `kSMErrorDomainLaunchd` | ✅ implemented | `legacy_error_domain_launchd()` |
@@ -32,7 +32,7 @@ Audited against:
 | `kSMErrorJobMustBeEnabled` | ✅ implemented | `SMErrorCode::JobMustBeEnabled` |
 | `kSMErrorInvalidPlist` | ✅ implemented | `SMErrorCode::InvalidPlist` |
 | `kSMErrorLaunchDeniedByUser` | ✅ implemented | `SMErrorCode::LaunchDeniedByUser` |
-| `kSMErrorAlreadyRegistered` | ✅ implemented | `SMErrorCode::AlreadyRegistered` |
+| `kSMErrorAlreadyRegistered` | ✅ implemented | `SMErrorCode::AlreadyRegistered` (via `ServiceManagementError::sm_error_code()`) |
 | `SMAppService.Status` | ✅ implemented | `SMAppServiceStatus` |
 | `SMAppServiceErrorDomain` | ✅ implemented | `app_service_error_domain()` |
 | `SMAppService.mainApp` | ✅ implemented | `SMAppService::main_app()`, `MainApp::new()` |
@@ -41,9 +41,13 @@ Audited against:
 | `SMAppService.daemon(plistName:)` | ✅ implemented | `SMAppService::daemon()`, `DaemonService::new()` |
 | `SMAppService.register()` | ✅ implemented | `SMAppService::register()` |
 | `SMAppService.unregister()` | ✅ implemented | `SMAppService::unregister()` |
-| `SMAppService.unregisterWithCompletionHandler(_:)` | ✅ implemented | `SMAppService::unregister_with_completion_handler()` |
-| `SMAppService.status` | ✅ implemented | `SMAppService::status()` |
+| `SMAppService.unregisterWithCompletionHandler(_:)` | ✅ implemented | `SMAppService::unregister_with_completion_handler(timeout)`, `SMAppServiceAsyncExt::unregister_async` |
+| `SMAppService.status` | ✅ implemented | `SMAppService::status()` (returns an error when the bridge fails) |
 | `SMAppService.statusForLegacyPlist(at:)` | ✅ implemented | `status_for_legacy_plist()` |
 | `SMAppService.openSystemSettingsLoginItems()` | ✅ implemented | `open_system_settings_login_items()` |
 
 Deferred/skipped: none.
+
+The `kSMError*` rows were listed as implemented before 0.5 although errors kept
+only their message, so `SMErrorCode` was never produced. Errors now carry their
+domain and code, and `ServiceManagementError::sm_error_code()` maps them.

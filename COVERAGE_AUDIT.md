@@ -12,6 +12,8 @@ Assumptions used for this audit:
 - The `SMAppService` interface declaration is not counted separately because the Rust `SMAppService` wrapper exists to expose the member surface listed below.
 - Deprecated SDK items stay visible in the audit, but they are tracked as **EXEMPT** per the audit instructions even when the crate still wraps them.
 
+> **0.5 corrections.** The `SMErrorCode` rows now point at a mapping that is actually produced (`ServiceManagementError::sm_error_code()`); before 0.5 errors kept only their message. `legacy::copy_all_job_dictionaries` is now the same function as `SMJobBless::copy_all_job_dictionaries`, and the wrappers of the deprecated functions below are `#[deprecated]`. "Verified" means a wrapper exists, not that every option is exposed.
+
 ## 🟢 VERIFIED
 | Symbol | Kind | Header | Wrapped by |
 | --- | --- | --- | --- |
@@ -57,7 +59,7 @@ No gaps found.
 | Symbol | Kind | Header | Reason | SDK attribute |
 | --- | --- | --- | --- | --- |
 | `SMJobCopyDictionary` | function | `ServiceManagement.h` | Deprecated in the SDK; excluded from the denominator even though it is wrapped by `SMJobBless::copy_job_dictionary()` and `legacy::job_copy_dictionary()`. | `__OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_6, __MAC_10_10, __IPHONE_3_0, __IPHONE_8_0)` |
-| `SMCopyAllJobDictionaries` | function | `ServiceManagement.h` | Deprecated in the SDK; excluded from the denominator even though it is wrapped by `SMJobBless::copy_all_job_dictionaries()` and `legacy::copy_all_job_dictionaries()`. | `__OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_6, __MAC_10_10, __IPHONE_3_0, __IPHONE_8_0)` |
+| `SMCopyAllJobDictionaries` | function | `ServiceManagement.h` | Deprecated in the SDK; excluded from the denominator even though it is wrapped by `SMJobBless::copy_all_job_dictionaries()` (also re-exported as `legacy::copy_all_job_dictionaries()`). | `__OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_6, __MAC_10_10, __IPHONE_3_0, __IPHONE_8_0)` |
 | `SMJobSubmit` | function | `ServiceManagement.h` | Deprecated in the SDK; excluded from the denominator even though it is wrapped by `SMJobBless::job_submit_plist()` and `legacy::job_submit_raw()`. | `__OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_6, __MAC_10_10, __IPHONE_3_0, __IPHONE_8_0)` |
 | `SMJobRemove` | function | `ServiceManagement.h` | Deprecated in the SDK; excluded from the denominator even though it is wrapped by `SMJobBless::job_remove()` and `legacy::job_remove()`. | `__OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_6, __MAC_10_10, __IPHONE_3_0, __IPHONE_8_0)` |
 | `SMJobBless` | function | `ServiceManagement.h` | Deprecated in the SDK; excluded from the denominator even though it is wrapped by `SMJobBless::bless()` and `legacy::job_bless()`. | `__OSX_DEPRECATED(10.6, 13.0, "Please use SMAppService instead")` |
