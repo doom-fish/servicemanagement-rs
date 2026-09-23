@@ -61,7 +61,7 @@ pub unsafe fn job_submit_raw(
 ) -> Result<()> {
     let mut error = std::ptr::null_mut();
     // SAFETY: Caller guarantees domain, job, and authorization are valid as documented above.
-    let ok = ffi::SMJobSubmit(domain.as_cfstring(), job, authorization, &mut error);
+    let ok = ffi::SMJobSubmit(domain.as_cfstring(), job, authorization, &raw mut error);
     if ok == 0 {
         Err(take_cf_error("SMJobSubmit", error))
     } else {
@@ -95,7 +95,7 @@ pub unsafe fn job_remove(
         job_label.as_ptr().cast(),
         authorization,
         u8::from(wait),
-        &mut error,
+        &raw mut error,
     );
     if ok == 0 {
         Err(take_cf_error("SMJobRemove", error))
@@ -128,7 +128,7 @@ pub unsafe fn job_bless(
         domain.as_cfstring(),
         executable_label.as_ptr().cast(),
         authorization,
-        &mut error,
+        &raw mut error,
     );
     if ok == 0 {
         Err(take_cf_error("SMJobBless", error))

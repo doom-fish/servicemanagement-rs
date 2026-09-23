@@ -18,7 +18,7 @@ impl SMAppService {
         let mut error = std::ptr::null_mut();
         // SAFETY: The FFI function returns a valid opaque pointer or null on error. The pointer
         // is consumed immediately by from_raw() which validates it or returns an error.
-        let raw = unsafe { ffi::sm_app_service_main_app(&mut error) };
+        let raw = unsafe { ffi::sm_app_service_main_app(&raw mut error) };
         Self::from_raw(raw, error, "sm_app_service_main_app")
     }
 
@@ -28,7 +28,7 @@ impl SMAppService {
         let mut error = std::ptr::null_mut();
         // SAFETY: identifier.as_ptr() points to a valid nul-terminated C string from CString.
         // The FFI function returns a valid pointer or null on error, consumed by from_raw().
-        let raw = unsafe { ffi::sm_app_service_login_item(identifier.as_ptr(), &mut error) };
+        let raw = unsafe { ffi::sm_app_service_login_item(identifier.as_ptr(), &raw mut error) };
         Self::from_raw(raw, error, "sm_app_service_login_item")
     }
 
@@ -38,7 +38,7 @@ impl SMAppService {
         let mut error = std::ptr::null_mut();
         // SAFETY: plist_name.as_ptr() points to a valid nul-terminated C string from CString.
         // The FFI function returns a valid pointer or null on error, consumed by from_raw().
-        let raw = unsafe { ffi::sm_app_service_agent(plist_name.as_ptr(), &mut error) };
+        let raw = unsafe { ffi::sm_app_service_agent(plist_name.as_ptr(), &raw mut error) };
         Self::from_raw(raw, error, "sm_app_service_agent")
     }
 
@@ -48,7 +48,7 @@ impl SMAppService {
         let mut error = std::ptr::null_mut();
         // SAFETY: plist_name.as_ptr() points to a valid nul-terminated C string from CString.
         // The FFI function returns a valid pointer or null on error, consumed by from_raw().
-        let raw = unsafe { ffi::sm_app_service_daemon(plist_name.as_ptr(), &mut error) };
+        let raw = unsafe { ffi::sm_app_service_daemon(plist_name.as_ptr(), &raw mut error) };
         Self::from_raw(raw, error, "sm_app_service_daemon")
     }
 
@@ -65,7 +65,7 @@ impl SMAppService {
         let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
         // The FFI function validates its argument and returns a bool status code.
-        let ok = unsafe { ffi::sm_app_service_register(self.0.as_ptr(), &mut error) };
+        let ok = unsafe { ffi::sm_app_service_register(self.0.as_ptr(), &raw mut error) };
         if ok {
             Ok(())
         } else {
@@ -78,7 +78,7 @@ impl SMAppService {
         let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
         // The FFI function validates its argument and returns a bool status code.
-        let ok = unsafe { ffi::sm_app_service_unregister(self.0.as_ptr(), &mut error) };
+        let ok = unsafe { ffi::sm_app_service_unregister(self.0.as_ptr(), &raw mut error) };
         if ok {
             Ok(())
         } else {
@@ -92,8 +92,9 @@ impl SMAppService {
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
         // The FFI function validates its argument and returns a bool status code. The
         // completion handler is managed internally by the bridged Swift code.
-        let ok =
-            unsafe { ffi::sm_app_service_unregister_with_completion(self.0.as_ptr(), &mut error) };
+        let ok = unsafe {
+            ffi::sm_app_service_unregister_with_completion(self.0.as_ptr(), &raw mut error)
+        };
         if ok {
             Ok(())
         } else {
@@ -133,7 +134,7 @@ pub fn open_system_settings_login_items() -> Result<()> {
     let mut error = std::ptr::null_mut();
     // SAFETY: The FFI function takes no pointer arguments other than an error pointer.
     // It returns a bool status code.
-    let ok = unsafe { ffi::sm_open_system_settings_login_items(&mut error) };
+    let ok = unsafe { ffi::sm_open_system_settings_login_items(&raw mut error) };
     if ok {
         Ok(())
     } else {
@@ -146,7 +147,7 @@ pub fn app_service_error_domain() -> Result<String> {
     let mut error = std::ptr::null_mut();
     // SAFETY: The FFI function returns a pointer to a C string that must be freed via
     // take_bridge_string, which handles the cleanup.
-    let raw = unsafe { ffi::sm_app_service_error_domain(&mut error) };
+    let raw = unsafe { ffi::sm_app_service_error_domain(&raw mut error) };
     if !error.is_null() {
         return Err(bridge_error("sm_app_service_error_domain", error));
     }

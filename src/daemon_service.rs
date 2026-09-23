@@ -11,7 +11,7 @@ impl DaemonService {
     pub fn new(plist_name: &str) -> Result<Self> {
         let plist_name = c_string(plist_name, "sm_daemon_service")?;
         let mut error = std::ptr::null_mut();
-        let raw = unsafe { ffi::sm_daemon_service(plist_name.as_ptr(), &mut error) };
+        let raw = unsafe { ffi::sm_daemon_service(plist_name.as_ptr(), &raw mut error) };
         SMAppService::from_raw(raw, error, "sm_daemon_service").map(Self)
     }
 

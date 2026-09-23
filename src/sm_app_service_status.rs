@@ -58,7 +58,7 @@ impl SMAppServiceStatus {
 pub fn status_for_legacy_plist(path: impl AsRef<Path>) -> Result<SMAppServiceStatus> {
     let path = path_c_string(path.as_ref(), "sm_app_service_status_for_legacy_plist")?;
     let mut error = std::ptr::null_mut();
-    let raw = unsafe { ffi::sm_app_service_status_for_legacy_plist(path.as_ptr(), &mut error) };
+    let raw = unsafe { ffi::sm_app_service_status_for_legacy_plist(path.as_ptr(), &raw mut error) };
     if !error.is_null() {
         return Err(bridge_error(
             "sm_app_service_status_for_legacy_plist",

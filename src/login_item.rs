@@ -11,7 +11,7 @@ impl LoginItem {
     pub fn new(identifier: &str) -> Result<Self> {
         let identifier = c_string(identifier, "sm_login_item_service")?;
         let mut error = std::ptr::null_mut();
-        let raw = unsafe { ffi::sm_login_item_service(identifier.as_ptr(), &mut error) };
+        let raw = unsafe { ffi::sm_login_item_service(identifier.as_ptr(), &raw mut error) };
         SMAppService::from_raw(raw, error, "sm_login_item_service").map(Self)
     }
 

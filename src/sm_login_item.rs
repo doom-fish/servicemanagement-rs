@@ -13,7 +13,7 @@ impl SMLoginItem {
         let identifier = c_string(identifier, "sm_legacy_login_item_set_enabled")?;
         let mut error = std::ptr::null_mut();
         let ok = unsafe {
-            ffi::sm_legacy_login_item_set_enabled(identifier.as_ptr(), enabled, &mut error)
+            ffi::sm_legacy_login_item_set_enabled(identifier.as_ptr(), enabled, &raw mut error)
         };
         if ok {
             Ok(())

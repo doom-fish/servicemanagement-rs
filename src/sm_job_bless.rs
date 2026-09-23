@@ -62,7 +62,11 @@ impl SMJobBless {
         // SAFETY: domain.raw_value() returns a valid i32. job_label.as_ptr() points to a valid
         // nul-terminated C string. The FFI function returns a C string or null (checked below).
         let raw = unsafe {
-            ffi::sm_legacy_copy_job_dictionary(domain.raw_value(), job_label.as_ptr(), &mut error)
+            ffi::sm_legacy_copy_job_dictionary(
+                domain.raw_value(),
+                job_label.as_ptr(),
+                &raw mut error,
+            )
         };
         if !error.is_null() {
             return Err(bridge_error("sm_legacy_copy_job_dictionary", error));
@@ -79,7 +83,7 @@ impl SMJobBless {
         // SAFETY: domain.raw_value() returns a valid i32. The FFI function returns a C string
         // or null (checked below), or an error pointer.
         let raw =
-            unsafe { ffi::sm_legacy_copy_all_job_dictionaries(domain.raw_value(), &mut error) };
+            unsafe { ffi::sm_legacy_copy_all_job_dictionaries(domain.raw_value(), &raw mut error) };
         if !error.is_null() {
             return Err(bridge_error("sm_legacy_copy_all_job_dictionaries", error));
         }
@@ -102,7 +106,7 @@ impl SMJobBless {
                 domain.raw_value(),
                 plist_xml.as_ptr(),
                 authorization.map_or(std::ptr::null_mut(), Authorization::as_ptr),
-                &mut error,
+                &raw mut error,
             )
         };
         if ok {
@@ -130,7 +134,7 @@ impl SMJobBless {
                 job_label.as_ptr(),
                 authorization.map_or(std::ptr::null_mut(), Authorization::as_ptr),
                 wait,
-                &mut error,
+                &raw mut error,
             )
         };
         if ok {
@@ -156,7 +160,7 @@ impl SMJobBless {
                 domain.raw_value(),
                 executable_label.as_ptr(),
                 authorization.map_or(std::ptr::null_mut(), Authorization::as_ptr),
-                &mut error,
+                &raw mut error,
             )
         };
         if ok {

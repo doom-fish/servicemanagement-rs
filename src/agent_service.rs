@@ -11,7 +11,7 @@ impl AgentService {
     pub fn new(plist_name: &str) -> Result<Self> {
         let plist_name = c_string(plist_name, "sm_agent_service")?;
         let mut error = std::ptr::null_mut();
-        let raw = unsafe { ffi::sm_agent_service(plist_name.as_ptr(), &mut error) };
+        let raw = unsafe { ffi::sm_agent_service(plist_name.as_ptr(), &raw mut error) };
         SMAppService::from_raw(raw, error, "sm_agent_service").map(Self)
     }
 
