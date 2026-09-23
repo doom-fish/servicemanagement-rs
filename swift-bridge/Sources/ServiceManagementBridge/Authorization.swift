@@ -200,43 +200,45 @@ public func sm_authorization_copy_rights(
 @_cdecl("sm_authorization_external_form")
 public func sm_authorization_external_form(
   _ rawAuthorization: UnsafeMutableRawPointer?,
+  _ bytesOut: UnsafeMutableRawPointer?,
+  _ capacity: Int,
   _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
-) -> UnsafeMutablePointer<CChar>? {
+) -> Bool {
   guard let authorization = smRequiredAuthorizationRef(rawAuthorization, errorOut) else {
-    return nil
+    return false
+  }
+  guard let bytesOut, capacity >= MemoryLayout<AuthorizationExternalForm>.size else {
+    smSetError(errorOut, "Authorization external form buffer must hold \(MemoryLayout<AuthorizationExternalForm>.size) bytes")
+    return false
   }
 
   var externalForm = AuthorizationExternalForm()
   let status = AuthorizationMakeExternalForm(authorization, &externalForm)
   guard status == errAuthorizationSuccess else {
     smSetError(errorOut, smAuthorizationStatusPayload(status))
-    return nil
+    return false
   }
 
-  let data = withUnsafeBytes(of: externalForm) { Data($0) }
-  return smCString(data.base64EncodedString())
+  withUnsafeBytes(of: externalForm) { bytes in
+    UnsafeMutableRawBufferPointer(start: bytesOut, count: bytes.count).copyMemory(from: bytes)
+  }
+  return true
 }
 
 @_cdecl("sm_authorization_from_external_form")
 public func sm_authorization_from_external_form(
-  _ externalFormBase64: UnsafePointer<CChar>?,
+  _ bytes: UnsafeRawPointer?,
+  _ length: Int,
   _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> UnsafeMutableRawPointer? {
-  guard let externalFormBase64 else {
-    smSetError(errorOut, "missing external Authorization form")
-    return nil
-  }
-
-  let payload = String(cString: externalFormBase64)
-  guard let data = Data(base64Encoded: payload),
-        data.count == MemoryLayout<AuthorizationExternalForm>.size else {
-    smSetError(errorOut, "Authorization external form must be base64 for 32 bytes")
+  guard let bytes, length == MemoryLayout<AuthorizationExternalForm>.size else {
+    smSetError(errorOut, "Authorization external form must be \(MemoryLayout<AuthorizationExternalForm>.size) bytes")
     return nil
   }
 
   var externalForm = AuthorizationExternalForm()
-  _ = withUnsafeMutableBytes(of: &externalForm) { buffer in
-    data.copyBytes(to: buffer)
+  withUnsafeMutableBytes(of: &externalForm) { buffer in
+    buffer.copyMemory(from: UnsafeRawBufferPointer(start: bytes, count: length))
   }
 
   var authorization: AuthorizationRef?

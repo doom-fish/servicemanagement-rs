@@ -114,10 +114,13 @@ unsafe extern "C" {
     ) -> bool;
     pub fn sm_authorization_external_form(
         authorization: *mut c_void,
+        bytes_out: *mut c_void,
+        capacity: isize,
         error_out: *mut *mut c_char,
-    ) -> *mut c_char;
+    ) -> bool;
     pub fn sm_authorization_from_external_form(
-        external_form: *const c_char,
+        bytes: *const c_void,
+        length: isize,
         error_out: *mut *mut c_char,
     ) -> *mut c_void;
     pub fn sm_authorization_destroy_rights(

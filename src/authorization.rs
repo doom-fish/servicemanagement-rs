@@ -6,9 +6,12 @@ use std::{
 use bitflags::bitflags;
 
 use crate::{
-    bridge::{bridge_error, c_string, take_bridge_string},
+    bridge::{bridge_error, c_string},
     ffi, Result, ServiceManagementError,
 };
+
+pub const EXTERNAL_FORM_LEN: usize = 32;
+const EXTERNAL_FORM_ISIZE: isize = 32;
 
 /// Authorization right string for ServiceManagement privileged helper installation.
 pub const SM_RIGHT_BLESS_PRIVILEGED_HELPER: &str = "com.apple.ServiceManagement.blesshelper";
@@ -113,26 +116,45 @@ impl Authorization {
         }
     }
 
-    /// Returns the external-form string for this Security authorization reference.
-    pub fn external_form(&self) -> Result<String> {
+    /// Returns the `AuthorizationExternalForm` bytes for this Security authorization reference.
+    pub fn external_form(&self) -> Result<Vec<u8>> {
+        let mut bytes = vec![0_u8; EXTERNAL_FORM_LEN];
         let mut error = std::ptr::null_mut();
-        // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
-        // The FFI function returns a pointer to a C string that must be freed via sm_string_free.
-        let raw = unsafe { ffi::sm_authorization_external_form(self.0.as_ptr(), &raw mut error) };
-        if !error.is_null() {
-            return Err(bridge_error("sm_authorization_external_form", error));
+        // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call,
+        // and bytes has room for the EXTERNAL_FORM_LEN bytes the bridge writes.
+        let ok = unsafe {
+            ffi::sm_authorization_external_form(
+                self.0.as_ptr(),
+                bytes.as_mut_ptr().cast(),
+                EXTERNAL_FORM_ISIZE,
+                &raw mut error,
+            )
+        };
+        if ok {
+            Ok(bytes)
+        } else {
+            Err(bridge_error("sm_authorization_external_form", error))
         }
-        take_bridge_string(raw, "sm_authorization_external_form")
     }
 
-    /// Restores a Security authorization reference from an external-form string.
-    pub fn from_external_form(form: &str) -> Result<Self> {
-        let form = c_string(form, "sm_authorization_from_external_form")?;
+    /// Restores a Security authorization reference from `AuthorizationExternalForm` bytes.
+    pub fn from_external_form(form: &[u8]) -> Result<Self> {
+        if form.len() != EXTERNAL_FORM_LEN {
+            return Err(ServiceManagementError::new(
+                "sm_authorization_from_external_form",
+                format!("an Authorization external form is {EXTERNAL_FORM_LEN} bytes"),
+            ));
+        }
         let mut error = std::ptr::null_mut();
-        // SAFETY: form.as_ptr() points to a valid nul-terminated C string from CString.
-        // The FFI function returns a valid pointer or null on error, consumed by from_raw().
-        let raw =
-            unsafe { ffi::sm_authorization_from_external_form(form.as_ptr(), &raw mut error) };
+        // SAFETY: form points to EXTERNAL_FORM_LEN readable bytes. The FFI function returns a
+        // valid pointer or null on error, consumed by from_raw().
+        let raw = unsafe {
+            ffi::sm_authorization_from_external_form(
+                form.as_ptr().cast(),
+                EXTERNAL_FORM_ISIZE,
+                &raw mut error,
+            )
+        };
         Self::from_raw(raw, error, "sm_authorization_from_external_form")
     }
 
