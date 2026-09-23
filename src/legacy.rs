@@ -10,12 +10,14 @@ pub use crate::authorization::{
 /// Re-exports the raw legacy ServiceManagement `AuthorizationRef` type.
 pub use crate::ffi::AuthorizationRef;
 /// Re-exports legacy `SMJobBless` helpers from ServiceManagement.
+#[allow(deprecated)]
 pub use crate::sm_job_bless::{
     bless as bless_plist, copy_all_job_dictionaries, copy_job_dictionary,
     job_remove as job_remove_plist, job_submit_plist, LaunchdDomain, LegacyJobDictionary,
     SMJobBless,
 };
 /// Re-exports the legacy `SMLoginItemSetEnabled` wrapper.
+#[allow(deprecated)]
 pub use crate::sm_login_item::{set_enabled as login_item_set_enabled, SMLoginItem};
 
 fn cfstring(value: &str, function: &'static str) -> Result<CFString> {
@@ -28,6 +30,10 @@ fn cfstring(value: &str, function: &'static str) -> Result<CFString> {
     Ok(CFString::new(value))
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMJobCopyDictionary is deprecated since macOS 10.10; use SMAppService::status instead"
+)]
 /// Returns the `SMJobCopyDictionary` description for a matching launchd job.
 pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Option<String>> {
     let job_label = cfstring(job_label, "SMJobCopyDictionary")?;
@@ -41,6 +47,10 @@ pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Opt
     Ok(dictionary.map(|dictionary| dictionary.description()))
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMJobSubmit is deprecated since macOS 10.10; use SMAppService instead"
+)]
 /// Raw CoreFoundation interface for SMJobSubmit.
 ///
 /// # Safety
@@ -63,6 +73,10 @@ pub unsafe fn job_submit_raw(
     })
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMJobRemove is deprecated since macOS 10.10; use SMAppService::unregister instead"
+)]
 /// Raw CoreFoundation interface for SMJobRemove.
 ///
 /// # Safety
@@ -96,6 +110,10 @@ pub unsafe fn job_remove(
     })
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMJobBless is deprecated since macOS 13; register the helper with SMAppService::daemon instead. A blessed helper runs as root and must validate every XPC client, for example by looking the client up with security-rs Code::guest_with_audit_token and checking it with Code::check_validity against a code requirement"
+)]
 /// Raw CoreFoundation interface for SMJobBless.
 ///
 /// # Safety

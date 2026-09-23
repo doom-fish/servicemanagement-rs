@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use servicemanagement::{LaunchdDomain, SMJobBless};
 
 fn main() {

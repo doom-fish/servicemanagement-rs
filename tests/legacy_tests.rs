@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use servicemanagement::legacy::{self, LaunchdDomain};
 use servicemanagement::{
     legacy_error_domain_framework, legacy_error_domain_ipc, legacy_error_domain_launchd,

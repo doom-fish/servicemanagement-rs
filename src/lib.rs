@@ -72,6 +72,7 @@ pub use sm_app_service::{
 /// Re-exports `SMAppService.Status` helpers from ServiceManagement.
 pub use sm_app_service_status::{status_for_legacy_plist, SMAppServiceStatus};
 /// Re-exports legacy `SMJobBless` helpers from ServiceManagement.
+#[allow(deprecated)]
 pub use sm_job_bless::{
     bless, copy_all_job_dictionaries, copy_job_dictionary, job_remove, job_submit_plist,
     LaunchdDomain, LegacyJobDictionary, SMJobBless,

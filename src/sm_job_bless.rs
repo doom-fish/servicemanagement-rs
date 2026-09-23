@@ -52,6 +52,10 @@ pub struct LegacyJobDictionary {
 pub struct SMJobBless;
 
 impl SMJobBless {
+    #[deprecated(
+        since = "0.5.0",
+        note = "SMJobCopyDictionary is deprecated since macOS 10.10; use SMAppService::status instead"
+    )]
     /// Returns the legacy `SMJobCopyDictionary` result for a label.
     pub fn copy_job_dictionary(
         domain: LaunchdDomain,
@@ -77,6 +81,10 @@ impl SMJobBless {
         parse_json(raw, "sm_legacy_copy_job_dictionary").map(Some)
     }
 
+    #[deprecated(
+        since = "0.5.0",
+        note = "SMCopyAllJobDictionaries is deprecated since macOS 10.10 and has no replacement; use SMAppService::status for your own services"
+    )]
     /// Returns all legacy `SMCopyAllJobDictionaries` results for a domain.
     pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<LegacyJobDictionary>> {
         let mut error = std::ptr::null_mut();
@@ -90,6 +98,10 @@ impl SMJobBless {
         parse_json(raw, "sm_legacy_copy_all_job_dictionaries")
     }
 
+    #[deprecated(
+        since = "0.5.0",
+        note = "SMJobSubmit is deprecated since macOS 10.10; use SMAppService instead"
+    )]
     /// Submits a launchd plist with legacy `SMJobSubmit`.
     pub fn job_submit_plist(
         domain: LaunchdDomain,
@@ -116,6 +128,10 @@ impl SMJobBless {
         }
     }
 
+    #[deprecated(
+        since = "0.5.0",
+        note = "SMJobRemove is deprecated since macOS 10.10; use SMAppService::unregister instead"
+    )]
     /// Removes a launchd job with legacy `SMJobRemove`.
     pub fn job_remove(
         domain: LaunchdDomain,
@@ -144,6 +160,10 @@ impl SMJobBless {
         }
     }
 
+    #[deprecated(
+        since = "0.5.0",
+        note = "SMJobBless is deprecated since macOS 13; register the helper with SMAppService::daemon instead. A blessed helper runs as root and must validate every XPC client, for example by looking the client up with security-rs Code::guest_with_audit_token and checking it with Code::check_validity against a code requirement"
+    )]
     /// Installs a privileged helper with legacy `SMJobBless`.
     pub fn bless(
         domain: LaunchdDomain,
@@ -171,6 +191,11 @@ impl SMJobBless {
     }
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMJobCopyDictionary is deprecated since macOS 10.10; use SMAppService::status instead"
+)]
+#[allow(deprecated)]
 /// Convenience wrapper around `SMJobBless::copy_job_dictionary`.
 pub fn copy_job_dictionary(
     domain: LaunchdDomain,
@@ -179,11 +204,21 @@ pub fn copy_job_dictionary(
     SMJobBless::copy_job_dictionary(domain, job_label)
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMCopyAllJobDictionaries is deprecated since macOS 10.10 and has no replacement; use SMAppService::status for your own services"
+)]
+#[allow(deprecated)]
 /// Convenience wrapper around `SMJobBless::copy_all_job_dictionaries`.
 pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<LegacyJobDictionary>> {
     SMJobBless::copy_all_job_dictionaries(domain)
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMJobSubmit is deprecated since macOS 10.10; use SMAppService instead"
+)]
+#[allow(deprecated)]
 /// Convenience wrapper around `SMJobBless::job_submit_plist`.
 pub fn job_submit_plist(
     domain: LaunchdDomain,
@@ -193,6 +228,11 @@ pub fn job_submit_plist(
     SMJobBless::job_submit_plist(domain, plist_xml, authorization)
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMJobRemove is deprecated since macOS 10.10; use SMAppService::unregister instead"
+)]
+#[allow(deprecated)]
 /// Convenience wrapper around `SMJobBless::job_remove`.
 pub fn job_remove(
     domain: LaunchdDomain,
@@ -203,6 +243,11 @@ pub fn job_remove(
     SMJobBless::job_remove(domain, job_label, authorization, wait)
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "SMJobBless is deprecated since macOS 13; register the helper with SMAppService::daemon instead. A blessed helper runs as root and must validate every XPC client, for example by looking the client up with security-rs Code::guest_with_audit_token and checking it with Code::check_validity against a code requirement"
+)]
+#[allow(deprecated)]
 /// Convenience wrapper around `SMJobBless::bless`.
 pub fn bless(
     domain: LaunchdDomain,

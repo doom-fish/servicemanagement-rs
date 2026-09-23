@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use std::{
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
