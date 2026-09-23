@@ -60,6 +60,7 @@ fn copy_job_dictionary_returns_none_for_missing_label() {
 }
 
 #[test]
+#[ignore = "submits a job to the user's launchd domain and runs it"]
 fn user_launchd_job_submit_and_remove_round_trips() {
     let label = unique_label();
     let _guard = SubmittedJobGuard {
