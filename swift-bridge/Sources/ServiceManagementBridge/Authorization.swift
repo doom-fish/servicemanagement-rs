@@ -19,11 +19,9 @@ func smAuthorizationFlags(_ rawValue: UInt32) -> AuthorizationFlags {
   AuthorizationFlags(rawValue: rawValue)
 }
 
-func smAuthorizationStatusMessage(_ status: OSStatus) -> String {
-  if let message = SecCopyErrorMessageString(status, nil) as String? {
-    return message
-  }
-  return "Authorization status \(status)"
+func smAuthorizationStatusPayload(_ status: OSStatus) -> String {
+  let message = SecCopyErrorMessageString(status, nil) as String? ?? "Authorization status \(status)"
+  return smErrorPayload(message: message, domain: NSOSStatusErrorDomain, code: Int(status))
 }
 
 func smAuthorizationHolder(
@@ -125,7 +123,7 @@ public func sm_authorization_create(
   var authorization: AuthorizationRef?
   let status = AuthorizationCreate(nil, nil, smAuthorizationFlags(flags), &authorization)
   guard status == errAuthorizationSuccess, let authorization else {
-    smSetError(errorOut, smAuthorizationStatusMessage(status))
+    smSetError(errorOut, smAuthorizationStatusPayload(status))
     return nil
   }
   return smRetain(AuthorizationHolder(authorization))
@@ -147,12 +145,12 @@ public func sm_authorization_create_with_rights(
       AuthorizationCreate(rightsPointer, nil, smAuthorizationFlags(flags), &authorization)
     }
     guard status == errAuthorizationSuccess, let authorization else {
-      smSetError(errorOut, smAuthorizationStatusMessage(status))
+      smSetError(errorOut, smAuthorizationStatusPayload(status))
       return nil
     }
     return smRetain(AuthorizationHolder(authorization))
   } catch {
-    smSetError(errorOut, smNSErrorMessage(error))
+    smSetError(errorOut, smNSErrorPayload(error))
     return nil
   }
 }
@@ -188,10 +186,10 @@ public func sm_authorization_copy_rights(
     if status == errAuthorizationSuccess {
       return true
     }
-    smSetError(errorOut, smAuthorizationStatusMessage(status))
+    smSetError(errorOut, smAuthorizationStatusPayload(status))
     return false
   } catch {
-    smSetError(errorOut, smNSErrorMessage(error))
+    smSetError(errorOut, smNSErrorPayload(error))
     return false
   }
 }
@@ -208,7 +206,7 @@ public func sm_authorization_external_form(
   var externalForm = AuthorizationExternalForm()
   let status = AuthorizationMakeExternalForm(authorization, &externalForm)
   guard status == errAuthorizationSuccess else {
-    smSetError(errorOut, smAuthorizationStatusMessage(status))
+    smSetError(errorOut, smAuthorizationStatusPayload(status))
     return nil
   }
 
@@ -241,7 +239,7 @@ public func sm_authorization_from_external_form(
   var authorization: AuthorizationRef?
   let status = AuthorizationCreateFromExternalForm(&externalForm, &authorization)
   guard status == errAuthorizationSuccess, let authorization else {
-    smSetError(errorOut, smAuthorizationStatusMessage(status))
+    smSetError(errorOut, smAuthorizationStatusPayload(status))
     return nil
   }
 
@@ -267,7 +265,7 @@ public func sm_authorization_destroy_rights(
     return true
   }
 
-  smSetError(errorOut, smAuthorizationStatusMessage(status))
+  smSetError(errorOut, smAuthorizationStatusPayload(status))
   return false
 }
 

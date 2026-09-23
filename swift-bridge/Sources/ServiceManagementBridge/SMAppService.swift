@@ -134,7 +134,7 @@ public func sm_app_service_register(
     try service.register()
     return true
   } catch {
-    smSetError(errorOut, smNSErrorMessage(error))
+    smSetError(errorOut, smNSErrorPayload(error))
     return false
   }
 }
@@ -151,7 +151,7 @@ public func sm_app_service_unregister(
     try service.unregister()
     return true
   } catch {
-    smSetError(errorOut, smNSErrorMessage(error))
+    smSetError(errorOut, smNSErrorPayload(error))
     return false
   }
 }
@@ -178,7 +178,7 @@ public func sm_app_service_register_async(
       try serviceBox.service.register()
       callback(context, nil)
     } catch {
-      callback(context, smCString(smNSErrorMessage(error)))
+      callback(context, smCString(smNSErrorPayload(error)))
     }
   }
 }
@@ -203,7 +203,7 @@ public func sm_app_service_unregister_async(
   serviceBox.service.unregister { [serviceBox] error in
     _ = serviceBox
     if let error {
-      callback(context, smCString(smNSErrorMessage(error)))
+      callback(context, smCString(smNSErrorPayload(error)))
     } else {
       callback(context, nil)
     }
@@ -230,7 +230,7 @@ public func sm_app_service_unregister_with_completion(
   semaphore.wait()
 
   if let operationError {
-    smSetError(errorOut, operationError.localizedDescription)
+    smSetError(errorOut, smNSErrorPayload(operationError))
     return false
   }
   return true

@@ -68,8 +68,19 @@ func smDecodeStringArray(
   }
 }
 
-func smNSErrorMessage(_ error: Error) -> String {
-  (error as NSError).localizedDescription
+func smErrorPayload(message: String, domain: String, code: Int) -> String {
+  let payload: [String: Any] = ["message": message, "domain": domain, "code": code]
+  guard let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]),
+        let string = String(data: data, encoding: .utf8)
+  else {
+    return message
+  }
+  return string
+}
+
+func smNSErrorPayload(_ error: Error) -> String {
+  let nsError = error as NSError
+  return smErrorPayload(message: nsError.localizedDescription, domain: nsError.domain, code: nsError.code)
 }
 
 @_cdecl("sm_string_free")

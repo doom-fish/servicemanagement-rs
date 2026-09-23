@@ -1,17 +1,32 @@
 use std::{error::Error, fmt};
 
+use serde::Deserialize;
+
 use crate::{cf::cfstring_to_string, ffi};
+
+const SM_APP_SERVICE_ERROR_DOMAIN: &str = "SMAppServiceErrorDomain";
+const SM_ERROR_DOMAIN_FRAMEWORK: &str = "kSMErrorDomainFramework";
 
 /// Result type returned by ServiceManagement framework wrappers.
 pub type Result<T> = std::result::Result<T, ServiceManagementError>;
 
 /// Error returned by a ServiceManagement framework wrapper call.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct ServiceManagementError {
     /// Name of the failing ServiceManagement bridge function.
     pub function: &'static str,
     /// Human-readable message returned by the bridge or framework.
     pub message: String,
+    pub domain: Option<String>,
+    pub code: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct BridgeErrorPayload {
+    message: String,
+    domain: String,
+    code: i64,
 }
 
 impl ServiceManagementError {
@@ -19,13 +34,57 @@ impl ServiceManagementError {
         Self {
             function,
             message: message.into(),
+            domain: None,
+            code: None,
+        }
+    }
+
+    pub(crate) fn with_domain_and_code(
+        function: &'static str,
+        message: impl Into<String>,
+        domain: impl Into<String>,
+        code: i64,
+    ) -> Self {
+        Self {
+            function,
+            message: message.into(),
+            domain: Some(domain.into()),
+            code: Some(code),
+        }
+    }
+
+    pub(crate) fn from_bridge_message(function: &'static str, message: String) -> Self {
+        if message.starts_with('{') {
+            if let Ok(payload) = serde_json::from_str::<BridgeErrorPayload>(&message) {
+                return Self::with_domain_and_code(
+                    function,
+                    payload.message,
+                    payload.domain,
+                    payload.code,
+                );
+            }
+        }
+        Self::new(function, message)
+    }
+
+    pub fn sm_error_code(&self) -> Option<SMErrorCode> {
+        match self.domain.as_deref() {
+            Some(SM_APP_SERVICE_ERROR_DOMAIN | SM_ERROR_DOMAIN_FRAMEWORK) => self
+                .code
+                .and_then(|code| i32::try_from(code).ok())
+                .and_then(SMErrorCode::from_raw),
+            _ => None,
         }
     }
 }
 
 impl fmt::Display for ServiceManagementError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} failed: {}", self.function, self.message)
+        write!(f, "{} failed: {}", self.function, self.message)?;
+        if let (Some(domain), Some(code)) = (&self.domain, self.code) {
+            write!(f, " ({domain} {code})")?;
+        }
+        Ok(())
     }
 }
 
@@ -137,4 +196,57 @@ fn legacy_error_domain(domain: ffi::CFStringRef, function: &'static str) -> Resu
     }
 
     cfstring_to_string(domain)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bridge_payloads_keep_the_domain_and_code() {
+        let error = ServiceManagementError::from_bridge_message(
+            "sm_app_service_register",
+            r#"{"code":11,"domain":"SMAppServiceErrorDomain","message":"denied"}"#.to_owned(),
+        );
+        assert_eq!(error.message, "denied");
+        assert_eq!(error.domain.as_deref(), Some("SMAppServiceErrorDomain"));
+        assert_eq!(error.code, Some(11));
+        assert_eq!(error.sm_error_code(), Some(SMErrorCode::LaunchDeniedByUser));
+        assert_eq!(
+            error.to_string(),
+            "sm_app_service_register failed: denied (SMAppServiceErrorDomain 11)"
+        );
+    }
+
+    #[test]
+    fn service_management_codes_map_only_in_service_management_domains() {
+        for (domain, code, expected) in [
+            (
+                "SMAppServiceErrorDomain",
+                12,
+                Some(SMErrorCode::AlreadyRegistered),
+            ),
+            (
+                "kSMErrorDomainFramework",
+                3,
+                Some(SMErrorCode::InvalidSignature),
+            ),
+            ("SMAppServiceErrorDomain", 22, None),
+            ("NSPOSIXErrorDomain", 11, None),
+            ("kSMErrorDomainLaunchd", 3, None),
+        ] {
+            let error = ServiceManagementError::with_domain_and_code("op", "message", domain, code);
+            assert_eq!(error.sm_error_code(), expected, "{domain} {code}");
+        }
+    }
+
+    #[test]
+    fn plain_bridge_messages_have_no_code() {
+        let error = ServiceManagementError::from_bridge_message("op", "plain failure".to_owned());
+        assert_eq!(error.message, "plain failure");
+        assert_eq!(error.domain, None);
+        assert_eq!(error.code, None);
+        assert_eq!(error.sm_error_code(), None);
+        assert_eq!(error.to_string(), "op failed: plain failure");
+    }
 }

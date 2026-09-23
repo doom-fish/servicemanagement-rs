@@ -33,17 +33,16 @@ func smLegacyJobPayload(
       "description": dictionary.description,
     ]
   } catch {
-    smSetError(errorOut, smNSErrorMessage(error))
+    smSetError(errorOut, smNSErrorPayload(error))
     return nil
   }
 }
 
-func smLegacyCFErrorMessage(_ error: Unmanaged<CFError>?) -> String? {
+func smLegacyCFErrorPayload(_ error: Unmanaged<CFError>?) -> String? {
   guard let error else {
     return nil
   }
-  let retained = error.takeRetainedValue()
-  return (retained as Error as NSError).localizedDescription
+  return smNSErrorPayload(error.takeRetainedValue() as Error)
 }
 
 @_cdecl("sm_legacy_copy_job_dictionary")
@@ -135,12 +134,12 @@ public func sm_legacy_job_submit_plist(
     if !ok {
       smSetError(
         errorOut,
-        smLegacyCFErrorMessage(cfError) ?? "SMJobSubmit returned false"
+        smLegacyCFErrorPayload(cfError) ?? "SMJobSubmit returned false"
       )
     }
     return ok
   } catch {
-    smSetError(errorOut, smNSErrorMessage(error))
+    smSetError(errorOut, smNSErrorPayload(error))
     return false
   }
 }
@@ -176,7 +175,7 @@ public func sm_legacy_job_remove(
   if !ok {
     smSetError(
       errorOut,
-      smLegacyCFErrorMessage(cfError) ?? "SMJobRemove returned false"
+      smLegacyCFErrorPayload(cfError) ?? "SMJobRemove returned false"
     )
   }
   return ok
@@ -211,7 +210,7 @@ public func sm_legacy_job_bless(
   if !ok {
     smSetError(
       errorOut,
-      smLegacyCFErrorMessage(cfError) ?? "SMJobBless returned false"
+      smLegacyCFErrorPayload(cfError) ?? "SMJobBless returned false"
     )
   }
   return ok

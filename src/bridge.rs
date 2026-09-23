@@ -28,7 +28,7 @@ pub(crate) fn bridge_error(function: &'static str, error: *mut c_char) -> Servic
         .into_owned();
     // SAFETY: error is a valid non-null C pointer from a previous FFI call that allocated it.
     unsafe { ffi::sm_string_free(error) };
-    ServiceManagementError::new(function, message)
+    ServiceManagementError::from_bridge_message(function, message)
 }
 
 pub(crate) fn take_bridge_string(raw: *mut c_char, function: &'static str) -> Result<String> {

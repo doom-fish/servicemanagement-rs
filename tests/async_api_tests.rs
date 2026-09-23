@@ -25,6 +25,8 @@ fn async_unregister_reports_an_error_for_missing_agent() {
             .await
             .expect_err("unregister should fail for a missing agent plist");
         assert!(!error.message.is_empty());
+        assert!(error.domain.is_some());
+        assert!(error.code.is_some());
     });
 }
 

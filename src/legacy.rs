@@ -1,3 +1,5 @@
+use apple_cf::cf::CFError;
+
 use crate::{
     cf::{cfarray_descriptions, cfstring_from_str, copy_description, OwnedCFType},
     ffi, Result, ServiceManagementError,
@@ -147,8 +149,17 @@ unsafe fn take_cf_error(function: &'static str, error: ffi::CFErrorRef) -> Servi
         return ServiceManagementError::new(function, "operation failed without a CFError");
     }
 
-    let message = crate::cf::copy_description(error.cast())
-        .unwrap_or_else(|_| "operation failed without a readable CFError".to_string());
-    ffi::CFRelease(error.cast());
-    ServiceManagementError::new(function, message)
+    let Some(error) = (unsafe { CFError::from_raw(error.cast()) }) else {
+        return ServiceManagementError::new(function, "operation failed without a CFError");
+    };
+    let message = error.description_string().map_or_else(
+        || "operation failed without a readable CFError".to_string(),
+        |description| description.to_string_lossy(),
+    );
+    ServiceManagementError::with_domain_and_code(
+        function,
+        message,
+        error.domain().to_string_lossy(),
+        error.code(),
+    )
 }

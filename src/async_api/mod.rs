@@ -72,9 +72,9 @@ fn poll_unit_future(
     cx: &mut Context<'_>,
     function: &'static str,
 ) -> Poll<Result<()>> {
-    Pin::new(inner)
-        .poll(cx)
-        .map(|result| result.map_err(|message| ServiceManagementError::new(function, message)))
+    Pin::new(inner).poll(cx).map(|result| {
+        result.map_err(|message| ServiceManagementError::from_bridge_message(function, message))
+    })
 }
 
 fn poll_status_future(
@@ -87,7 +87,7 @@ fn poll_status_future(
             STATUS_FOR_LEGACY_PLIST_FUNCTION,
             format!("bridge returned an invalid status value {raw}"),
         )),
-        Err(message) => Err(ServiceManagementError::new(
+        Err(message) => Err(ServiceManagementError::from_bridge_message(
             STATUS_FOR_LEGACY_PLIST_FUNCTION,
             message,
         )),
