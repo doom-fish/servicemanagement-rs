@@ -1,9 +1,6 @@
-use apple_cf::cf::CFError;
+use apple_cf::cf::{CFError, CFString, CFType};
 
-use crate::{
-    cf::{cfarray_descriptions, cfstring_from_str, copy_description, OwnedCFType},
-    ffi, Result, ServiceManagementError,
-};
+use crate::{ffi, Result, ServiceManagementError};
 
 /// Re-exports legacy authorization helpers used with ServiceManagement.
 pub use crate::authorization::{
@@ -14,38 +11,34 @@ pub use crate::authorization::{
 pub use crate::ffi::AuthorizationRef;
 /// Re-exports legacy `SMJobBless` helpers from ServiceManagement.
 pub use crate::sm_job_bless::{
-    bless as bless_plist, copy_all_job_dictionaries as copy_all_job_dictionaries_structured,
-    copy_job_dictionary, job_remove as job_remove_plist, job_submit_plist, LaunchdDomain,
-    LegacyJobDictionary, SMJobBless,
+    bless as bless_plist, copy_all_job_dictionaries, copy_job_dictionary,
+    job_remove as job_remove_plist, job_submit_plist, LaunchdDomain, LegacyJobDictionary,
+    SMJobBless,
 };
 /// Re-exports the legacy `SMLoginItemSetEnabled` wrapper.
 pub use crate::sm_login_item::{set_enabled as login_item_set_enabled, SMLoginItem};
 
-/// Returns the `SMJobCopyDictionary` description for a matching launchd job.
-pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Option<String>> {
-    let job_label = cfstring_from_str(job_label)?;
-    // SAFETY: domain.as_cfstring() returns a valid CFStringRef. job_label.as_ptr() is a
-    // valid NonNull CFStringRef pointer. SMJobCopyDictionary returns a CFDictionaryRef or null.
-    let dictionary =
-        unsafe { ffi::SMJobCopyDictionary(domain.as_cfstring(), job_label.as_ptr().cast()) };
-    if dictionary.is_null() {
-        return Ok(None);
+fn cfstring(value: &str, function: &'static str) -> Result<CFString> {
+    if value.contains('\0') {
+        return Err(ServiceManagementError::new(
+            function,
+            "strings passed to CoreFoundation cannot contain interior NUL bytes",
+        ));
     }
-    // SAFETY: We checked dictionary is not null above. from_create_rule wraps it in a
-    // NonNull which manages the lifetime and ensures CFRelease is called on drop.
-    let dictionary = unsafe { OwnedCFType::from_create_rule(dictionary) }.ok_or_else(|| {
-        ServiceManagementError::new("SMJobCopyDictionary", "received null CFDictionary")
-    })?;
-    copy_description(dictionary.as_ptr()).map(Some)
+    Ok(CFString::new(value))
 }
 
-/// Returns `SMCopyAllJobDictionaries` descriptions for a launchd domain.
-pub fn copy_all_job_dictionaries(domain: LaunchdDomain) -> Result<Vec<String>> {
-    // SAFETY: domain.as_cfstring() returns a valid CFStringRef. SMCopyAllJobDictionaries
-    // returns a CFArrayRef (possibly empty but never null). cfarray_descriptions handles
-    // the pointer safely.
-    let dictionaries = unsafe { ffi::SMCopyAllJobDictionaries(domain.as_cfstring()) };
-    cfarray_descriptions(dictionaries)
+/// Returns the `SMJobCopyDictionary` description for a matching launchd job.
+pub fn job_copy_dictionary(domain: LaunchdDomain, job_label: &str) -> Result<Option<String>> {
+    let job_label = cfstring(job_label, "SMJobCopyDictionary")?;
+    // SAFETY: domain.as_cfstring() returns a valid CFStringRef and job_label is a live CFString.
+    // SMJobCopyDictionary follows the create rule, so the returned dictionary (or null) is
+    // adopted by CFType::from_raw and released on drop.
+    let dictionary = unsafe {
+        let raw = ffi::SMJobCopyDictionary(domain.as_cfstring(), job_label.as_ptr().cast());
+        CFType::from_raw(raw.cast_mut().cast())
+    };
+    Ok(dictionary.map(|dictionary| dictionary.description()))
 }
 
 /// Raw CoreFoundation interface for SMJobSubmit.
@@ -63,15 +56,11 @@ pub unsafe fn job_submit_raw(
 ) -> Result<()> {
     let mut error = std::ptr::null_mut();
     // SAFETY: Caller guarantees domain, job, and authorization are valid as documented above.
-    let ok = ffi::SMJobSubmit(domain.as_cfstring(), job, authorization, &raw mut error);
-    if ok == 0 {
-        Err(take_cf_error("SMJobSubmit", error))
-    } else {
-        if !error.is_null() {
-            ffi::CFRelease(error.cast());
-        }
-        Ok(())
-    }
+    let ok = unsafe { ffi::SMJobSubmit(domain.as_cfstring(), job, authorization, &raw mut error) };
+    // SAFETY: SMJobSubmit hands back a +1 CFErrorRef (or null), adopted here.
+    cf_result("SMJobSubmit", ok, unsafe {
+        CFError::from_raw(error.cast())
+    })
 }
 
 /// Raw CoreFoundation interface for SMJobRemove.
@@ -88,25 +77,23 @@ pub unsafe fn job_remove(
     authorization: AuthorizationRef,
     wait: bool,
 ) -> Result<()> {
-    let job_label = cfstring_from_str(job_label)?;
+    let job_label = cfstring(job_label, "SMJobRemove")?;
     let mut error = std::ptr::null_mut();
     // SAFETY: Caller guarantees domain and authorization are valid as documented above.
-    // job_label is a valid CFStringRef from cfstring_from_str.
-    let ok = ffi::SMJobRemove(
-        domain.as_cfstring(),
-        job_label.as_ptr().cast(),
-        authorization,
-        u8::from(wait),
-        &raw mut error,
-    );
-    if ok == 0 {
-        Err(take_cf_error("SMJobRemove", error))
-    } else {
-        if !error.is_null() {
-            ffi::CFRelease(error.cast());
-        }
-        Ok(())
-    }
+    // job_label is a live CFString.
+    let ok = unsafe {
+        ffi::SMJobRemove(
+            domain.as_cfstring(),
+            job_label.as_ptr().cast(),
+            authorization,
+            u8::from(wait),
+            &raw mut error,
+        )
+    };
+    // SAFETY: SMJobRemove hands back a +1 CFErrorRef (or null), adopted here.
+    cf_result("SMJobRemove", ok, unsafe {
+        CFError::from_raw(error.cast())
+    })
 }
 
 /// Raw CoreFoundation interface for SMJobBless.
@@ -122,44 +109,40 @@ pub unsafe fn job_bless(
     executable_label: &str,
     authorization: AuthorizationRef,
 ) -> Result<()> {
-    let executable_label = cfstring_from_str(executable_label)?;
+    let executable_label = cfstring(executable_label, "SMJobBless")?;
     let mut error = std::ptr::null_mut();
     // SAFETY: Caller guarantees domain and authorization are valid as documented above.
-    // executable_label is a valid CFStringRef from cfstring_from_str.
-    let ok = ffi::SMJobBless(
-        domain.as_cfstring(),
-        executable_label.as_ptr().cast(),
-        authorization,
-        &raw mut error,
-    );
-    if ok == 0 {
-        Err(take_cf_error("SMJobBless", error))
-    } else {
-        if !error.is_null() {
-            ffi::CFRelease(error.cast());
-        }
-        Ok(())
-    }
+    // executable_label is a live CFString.
+    let ok = unsafe {
+        ffi::SMJobBless(
+            domain.as_cfstring(),
+            executable_label.as_ptr().cast(),
+            authorization,
+            &raw mut error,
+        )
+    };
+    // SAFETY: SMJobBless hands back a +1 CFErrorRef (or null), adopted here.
+    cf_result("SMJobBless", ok, unsafe { CFError::from_raw(error.cast()) })
 }
 
-// SAFETY: Only called from error paths within unsafe functions, with error pointers
-// guaranteed to be non-null by the caller. CFRelease is safe to call on valid CFError pointers.
-unsafe fn take_cf_error(function: &'static str, error: ffi::CFErrorRef) -> ServiceManagementError {
-    if error.is_null() {
-        return ServiceManagementError::new(function, "operation failed without a CFError");
+fn cf_result(function: &'static str, ok: ffi::Boolean, error: Option<CFError>) -> Result<()> {
+    if ok != 0 {
+        return Ok(());
     }
-
-    let Some(error) = (unsafe { CFError::from_raw(error.cast()) }) else {
-        return ServiceManagementError::new(function, "operation failed without a CFError");
+    let Some(error) = error else {
+        return Err(ServiceManagementError::new(
+            function,
+            "operation failed without a CFError",
+        ));
     };
     let message = error.description_string().map_or_else(
         || "operation failed without a readable CFError".to_string(),
         |description| description.to_string_lossy(),
     );
-    ServiceManagementError::with_domain_and_code(
+    Err(ServiceManagementError::with_domain_and_code(
         function,
         message,
         error.domain().to_string_lossy(),
         error.code(),
-    )
+    ))
 }

@@ -26,7 +26,6 @@ pub mod async_api;
 /// ServiceManagement framework authorization helpers.
 pub mod authorization;
 mod bridge;
-mod cf;
 /// ServiceManagement framework daemon service wrappers.
 pub mod daemon_service;
 mod error;

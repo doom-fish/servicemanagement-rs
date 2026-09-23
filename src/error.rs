@@ -2,7 +2,9 @@ use std::{error::Error, fmt};
 
 use serde::Deserialize;
 
-use crate::{cf::cfstring_to_string, ffi};
+use apple_cf::cf::CFString;
+
+use crate::ffi;
 
 const SM_APP_SERVICE_ERROR_DOMAIN: &str = "SMAppServiceErrorDomain";
 const SM_ERROR_DOMAIN_FRAMEWORK: &str = "kSMErrorDomainFramework";
@@ -188,14 +190,11 @@ pub fn legacy_error_domain_launchd() -> Result<String> {
 }
 
 fn legacy_error_domain(domain: ffi::CFStringRef, function: &'static str) -> Result<String> {
-    if domain.is_null() {
-        return Err(ServiceManagementError::new(
-            function,
-            "received a null error domain",
-        ));
-    }
-
-    cfstring_to_string(domain)
+    // SAFETY: domain is one of the framework's static CFStringRef constants (or null, which
+    // from_raw_borrowed maps to None); retaining it for the duration of the read is valid.
+    unsafe { CFString::from_raw_borrowed(domain.cast_mut().cast()) }
+        .map(|domain| domain.to_string_lossy())
+        .ok_or_else(|| ServiceManagementError::new(function, "received a null error domain"))
 }
 
 #[cfg(test)]

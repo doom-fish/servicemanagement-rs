@@ -8,7 +8,7 @@ pub type SMAppServiceUnitCallback = unsafe extern "C" fn(context: *mut c_void, e
 #[cfg(feature = "async")]
 pub type SMAppServiceStatusCallback =
     unsafe extern "C" fn(context: *mut c_void, status: i32, error: *mut c_char);
-pub use apple_cf::raw::{Boolean, CFArrayRef, CFDictionaryRef, CFErrorRef, CFStringRef};
+pub use apple_cf::raw::{Boolean, CFDictionaryRef, CFErrorRef, CFStringRef};
 
 unsafe extern "C" {
     pub static kSMDomainSystemLaunchd: CFStringRef;
@@ -17,27 +17,7 @@ unsafe extern "C" {
     pub static kSMErrorDomainFramework: CFStringRef;
     pub static kSMErrorDomainLaunchd: CFStringRef;
 
-    pub fn CFArrayGetCount(the_array: CFArrayRef) -> isize;
-    pub fn CFArrayGetValueAtIndex(the_array: CFArrayRef, idx: isize) -> *const c_void;
-    pub fn CFCopyDescription(cf: *const c_void) -> CFStringRef;
-    pub fn CFRetain(cf: *const c_void) -> *const c_void;
-    pub fn CFRelease(cf: *const c_void);
-    pub fn CFStringCreateWithCString(
-        allocator: *const c_void,
-        c_str: *const c_char,
-        encoding: u32,
-    ) -> CFStringRef;
-    pub fn CFStringGetLength(the_string: CFStringRef) -> isize;
-    pub fn CFStringGetMaximumSizeForEncoding(length: isize, encoding: u32) -> isize;
-    pub fn CFStringGetCString(
-        the_string: CFStringRef,
-        buffer: *mut c_char,
-        buffer_size: isize,
-        encoding: u32,
-    ) -> Boolean;
-
     pub fn SMJobCopyDictionary(domain: CFStringRef, job_label: CFStringRef) -> CFDictionaryRef;
-    pub fn SMCopyAllJobDictionaries(domain: CFStringRef) -> CFArrayRef;
     pub fn SMJobBless(
         domain: CFStringRef,
         executable_label: CFStringRef,
