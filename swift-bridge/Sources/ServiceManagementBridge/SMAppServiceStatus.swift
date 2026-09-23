@@ -16,7 +16,7 @@ public func sm_app_service_status_for_legacy_plist(
     return -1
   }
   let url = URL(fileURLWithPath: String(cString: path))
-  return Int32(SMAppService.statusForLegacyPlist(at: url).rawValue)
+  return Int32(clamping: SMAppService.statusForLegacyPlist(at: url).rawValue)
 }
 
 @_cdecl("sm_app_service_status_for_legacy_plist_async")
@@ -39,6 +39,6 @@ public func sm_app_service_status_for_legacy_plist_async(
 
   let url = URL(fileURLWithPath: String(cString: path))
   DispatchQueue.global(qos: .userInitiated).async {
-    callback(context, Int32(SMAppService.statusForLegacyPlist(at: url).rawValue), nil)
+    callback(context, Int32(clamping: SMAppService.statusForLegacyPlist(at: url).rawValue), nil)
   }
 }

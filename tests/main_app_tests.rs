@@ -4,7 +4,7 @@ use servicemanagement::{MainApp, SMAppServiceStatus};
 fn main_app_wrapper_exposes_status() {
     let service = MainApp::new().expect("main app wrapper should be constructible");
     assert!(matches!(
-        service.status(),
+        service.status().expect("status should be readable"),
         SMAppServiceStatus::NotRegistered
             | SMAppServiceStatus::Enabled
             | SMAppServiceStatus::RequiresApproval

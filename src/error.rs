@@ -8,6 +8,7 @@ use crate::ffi;
 
 const SM_APP_SERVICE_ERROR_DOMAIN: &str = "SMAppServiceErrorDomain";
 const SM_ERROR_DOMAIN_FRAMEWORK: &str = "kSMErrorDomainFramework";
+const TIMED_OUT: i64 = 60;
 
 /// Result type returned by ServiceManagement framework wrappers.
 pub type Result<T> = std::result::Result<T, ServiceManagementError>;
@@ -67,6 +68,10 @@ impl ServiceManagementError {
             }
         }
         Self::new(function, message)
+    }
+
+    pub fn is_timeout(&self) -> bool {
+        self.domain.as_deref() == Some("NSPOSIXErrorDomain") && self.code == Some(TIMED_OUT)
     }
 
     pub fn sm_error_code(&self) -> Option<SMErrorCode> {

@@ -52,7 +52,7 @@ unsafe extern "C" {
         plist_name: *const c_char,
         error_out: *mut *mut c_char,
     ) -> *mut c_void;
-    pub fn sm_app_service_status(service: *mut c_void) -> i32;
+    pub fn sm_app_service_status(service: *mut c_void, error_out: *mut *mut c_char) -> i32;
     pub fn sm_app_service_register(service: *mut c_void, error_out: *mut *mut c_char) -> bool;
     #[cfg(feature = "async")]
     pub fn sm_app_service_register_async(
@@ -69,6 +69,7 @@ unsafe extern "C" {
     );
     pub fn sm_app_service_unregister_with_completion(
         service: *mut c_void,
+        timeout_milliseconds: u64,
         error_out: *mut *mut c_char,
     ) -> bool;
     pub fn sm_app_service_error_domain(error_out: *mut *mut c_char) -> *mut c_char;

@@ -34,7 +34,7 @@ use servicemanagement::MainApp;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let main_app = MainApp::new()?;
-    println!("main app status: {}", main_app.status().as_str());
+    println!("main app status: {}", main_app.status()?.as_str());
     Ok(())
 }
 ```

@@ -9,8 +9,8 @@ func smRetain(_ object: AnyObject) -> UnsafeMutableRawPointer {
   Unmanaged.passRetained(object).toOpaque()
 }
 
-func smBorrow<T: AnyObject>(_ pointer: UnsafeMutableRawPointer) -> T {
-  Unmanaged<T>.fromOpaque(pointer).takeUnretainedValue()
+func smBorrow<T: AnyObject>(_ pointer: UnsafeMutableRawPointer) -> T? {
+  Unmanaged<AnyObject>.fromOpaque(pointer).takeUnretainedValue() as? T
 }
 
 func smRelease(_ pointer: UnsafeMutableRawPointer) {

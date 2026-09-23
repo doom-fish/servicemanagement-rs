@@ -32,7 +32,10 @@ func smAuthorizationHolder(
     smSetError(errorOut, "missing Authorization handle")
     return nil
   }
-  let holder: AuthorizationHolder = smBorrow(rawAuthorization)
+  guard let holder: AuthorizationHolder = smBorrow(rawAuthorization) else {
+    smSetError(errorOut, "invalid Authorization handle")
+    return nil
+  }
   return holder
 }
 

@@ -5,7 +5,7 @@ fn login_item_wrapper_exposes_status() {
     let service = LoginItem::new("com.example.login-item")
         .expect("login item wrapper should be constructible");
     assert!(matches!(
-        service.status(),
+        service.status().expect("status should be readable"),
         SMAppServiceStatus::NotRegistered
             | SMAppServiceStatus::Enabled
             | SMAppServiceStatus::RequiresApproval

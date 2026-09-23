@@ -45,7 +45,10 @@ func smBorrowAppService(
     smSetError(errorOut, "missing SMAppService handle")
     return nil
   }
-  let holder: SMAppServiceHolder = smBorrow(rawService)
+  guard let holder: SMAppServiceHolder = smBorrow(rawService) else {
+    smSetError(errorOut, "invalid SMAppService handle")
+    return nil
+  }
   return holder.service
 }
 
@@ -115,11 +118,14 @@ public func sm_app_service_daemon(
 }
 
 @_cdecl("sm_app_service_status")
-public func sm_app_service_status(_ rawService: UnsafeMutableRawPointer?) -> Int32 {
-  guard let service = smBorrowAppService(rawService, nil) else {
+public func sm_app_service_status(
+  _ rawService: UnsafeMutableRawPointer?,
+  _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+  guard let service = smBorrowAppService(rawService, errorOut) else {
     return -1
   }
-  return Int32(service.status.rawValue)
+  return Int32(clamping: service.status.rawValue)
 }
 
 @_cdecl("sm_app_service_register")
@@ -210,9 +216,27 @@ public func sm_app_service_unregister_async(
   }
 }
 
+final class SMUnregisterOutcome: @unchecked Sendable {
+  private let lock = NSLock()
+  private var error: NSError?
+
+  func store(_ error: Error?) {
+    lock.lock()
+    self.error = error.map { $0 as NSError }
+    lock.unlock()
+  }
+
+  func load() -> NSError? {
+    lock.lock()
+    defer { lock.unlock() }
+    return error
+  }
+}
+
 @_cdecl("sm_app_service_unregister_with_completion")
 public func sm_app_service_unregister_with_completion(
   _ rawService: UnsafeMutableRawPointer?,
+  _ timeoutMilliseconds: UInt64,
   _ errorOut: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Bool {
   guard let service = smBorrowAppService(rawService, errorOut) else {
@@ -220,16 +244,25 @@ public func sm_app_service_unregister_with_completion(
   }
 
   let semaphore = DispatchSemaphore(value: 0)
-  var operationError: NSError?
+  let outcome = SMUnregisterOutcome()
   service.unregister { error in
-    if let error {
-      operationError = error as NSError
-    }
+    outcome.store(error)
     semaphore.signal()
   }
-  semaphore.wait()
+  let deadline = DispatchTime.now() + .milliseconds(Int(clamping: timeoutMilliseconds))
+  guard semaphore.wait(timeout: deadline) == .success else {
+    smSetError(
+      errorOut,
+      smErrorPayload(
+        message: "SMAppService.unregister did not complete within \(timeoutMilliseconds) ms",
+        domain: NSPOSIXErrorDomain,
+        code: Int(ETIMEDOUT)
+      )
+    )
+    return false
+  }
 
-  if let operationError {
+  if let operationError = outcome.load() {
     smSetError(errorOut, smNSErrorPayload(operationError))
     return false
   }

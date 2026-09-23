@@ -1,12 +1,15 @@
 use std::{
     ffi::{c_char, c_void},
     ptr::NonNull,
+    time::Duration,
 };
 
 use crate::{
     bridge::{bridge_error, c_string, take_bridge_string},
     ffi, Result, SMAppServiceStatus,
 };
+
+const MAX_WAIT_MILLISECONDS: u64 = 9_000_000_000_000;
 
 /// Wraps a `ServiceManagement.SMAppService` instance.
 #[derive(Debug)]
@@ -53,11 +56,16 @@ impl SMAppService {
     }
 
     /// Returns the current `ServiceManagement.SMAppService.Status` for this service.
-    pub fn status(&self) -> SMAppServiceStatus {
+    pub fn status(&self) -> Result<SMAppServiceStatus> {
+        let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
-        // The FFI function returns an enum value (stateless, no lifetime issues).
-        let raw = unsafe { ffi::sm_app_service_status(self.0.as_ptr()) };
-        SMAppServiceStatus::from_raw(raw)
+        // The bridge reports failures through error.
+        let raw = unsafe { ffi::sm_app_service_status(self.0.as_ptr(), &raw mut error) };
+        if error.is_null() {
+            Ok(SMAppServiceStatus::from_raw(raw))
+        } else {
+            Err(bridge_error("sm_app_service_status", error))
+        }
     }
 
     /// Registers this ServiceManagement service with the system.
@@ -87,13 +95,20 @@ impl SMAppService {
     }
 
     /// Unregisters this ServiceManagement service using the completion-handler variant.
-    pub fn unregister_with_completion_handler(&self) -> Result<()> {
+    pub fn unregister_with_completion_handler(&self, timeout: Duration) -> Result<()> {
+        let timeout_milliseconds = u64::try_from(timeout.as_millis())
+            .unwrap_or(u64::MAX)
+            .min(MAX_WAIT_MILLISECONDS);
         let mut error = std::ptr::null_mut();
         // SAFETY: self.0 is a valid NonNull opaque pointer from a previous successful FFI call.
-        // The FFI function validates its argument and returns a bool status code. The
-        // completion handler is managed internally by the bridged Swift code.
+        // The bridge waits at most timeout_milliseconds; a completion that arrives later only
+        // touches bridge-owned state.
         let ok = unsafe {
-            ffi::sm_app_service_unregister_with_completion(self.0.as_ptr(), &raw mut error)
+            ffi::sm_app_service_unregister_with_completion(
+                self.0.as_ptr(),
+                timeout_milliseconds,
+                &raw mut error,
+            )
         };
         if ok {
             Ok(())

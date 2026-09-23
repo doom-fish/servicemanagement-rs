@@ -5,7 +5,7 @@ fn agent_service_wrapper_exposes_status() {
     let service = AgentService::new("com.example.agent.plist")
         .expect("agent service wrapper should be constructible");
     assert!(matches!(
-        service.status(),
+        service.status().expect("status should be readable"),
         SMAppServiceStatus::NotRegistered
             | SMAppServiceStatus::Enabled
             | SMAppServiceStatus::RequiresApproval
