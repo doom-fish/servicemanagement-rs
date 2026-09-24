@@ -120,6 +120,7 @@ impl SMAppService {
         }
     }
 
+    #[cfg(feature = "async")]
     pub(crate) const fn as_ptr(&self) -> *mut c_void {
         self.0.as_ptr()
     }
