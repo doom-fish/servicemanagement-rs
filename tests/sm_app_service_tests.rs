@@ -26,7 +26,7 @@ fn completion_based_unregister_reports_an_error_for_missing_agent() {
     let error = service
         .unregister_with_completion_handler(Duration::from_secs(30))
         .expect_err("unregister should fail for a missing agent plist");
-    assert!(!error.message.is_empty());
+    assert_ne!(error.message, "");
     assert!(!error.is_timeout());
 }
 
@@ -50,7 +50,7 @@ fn unregister_errors_keep_the_framework_domain_and_code() {
     let error = service
         .unregister()
         .expect_err("unregister should fail for a missing agent plist");
-    assert!(!error.message.is_empty());
+    assert_ne!(error.message, "");
     assert!(error.code.is_some());
     if let Ok(domain) = app_service_error_domain() {
         assert_eq!(error.domain.as_deref(), Some(domain.as_str()));
@@ -62,7 +62,7 @@ fn unregister_errors_keep_the_framework_domain_and_code() {
 #[test]
 fn app_service_error_domain_is_available_or_version_gated() {
     match app_service_error_domain() {
-        Ok(domain) => assert!(!domain.is_empty()),
+        Ok(domain) => assert_ne!(domain, ""),
         Err(error) => assert!(error.message.contains("macOS 15+")),
     }
 }
